@@ -1,5 +1,6 @@
 // Use createRequire to import CommonJS modules in ES modules environment
 import { createRequire } from 'module';
+import { WhatsAppBusinessAPIService } from './whatsapp-business-api.js';
 const require = createRequire(import.meta.url);
 
 const createWhatsAppClient = async () => {
@@ -16,8 +17,20 @@ export class WhatsAppService {
   private qrCode: string | null = null;
   private connectionStatus: 'disconnected' | 'waiting_qr' | 'connecting' | 'connected' = 'disconnected';
   private modules: any = null;
+  private businessAPI: WhatsAppBusinessAPIService;
 
   async initialize(): Promise<void> {
+    this.businessAPI = new WhatsAppBusinessAPIService();
+    
+    // Se a Business API estiver configurada, use-a em vez do modo simulação
+    if (this.businessAPI.isConfigured()) {
+      console.log('✅ WhatsApp Business API configurada - usando API oficial');
+      this.simulateMode = false;
+      this.isConnected = true;
+      this.connectionStatus = 'connected';
+      return;
+    }
+    
     if (this.simulateMode) {
       console.log('✅ WhatsApp Service initialized in simulation mode (recommended for Replit)');
       this.isConnected = true;
@@ -111,6 +124,11 @@ export class WhatsAppService {
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {
     if (!this.isConnected) {
       throw new Error('WhatsApp is not connected');
+    }
+
+    // Prioridade: Business API > WhatsApp-Web.js > Simulação
+    if (this.businessAPI && this.businessAPI.isConfigured()) {
+      return await this.businessAPI.sendMessage(phoneNumber, message);
     }
 
     if (this.simulateMode) {
