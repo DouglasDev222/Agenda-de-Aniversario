@@ -126,13 +126,18 @@ export class WhatsAppService {
       throw new Error('WhatsApp is not connected');
     }
 
+    console.log(`🎯 ENVIO DE MENSAGEM INICIADO:`);
+    console.log(`📞 Número de destino: ${phoneNumber}`);
+    console.log(`💬 Mensagem: ${message.substring(0, 100)}...`);
+
     // Prioridade: Business API > WhatsApp-Web.js > Simulação
     if (this.businessAPI && this.businessAPI.isConfigured()) {
+      console.log(`🔄 Usando WhatsApp Business API para envio`);
       return await this.businessAPI.sendMessage(phoneNumber, message);
     }
 
     if (this.simulateMode) {
-      console.log(`📱 Simulando envio de mensagem para ${phoneNumber}:`);
+      console.log(`📱 MODO SIMULAÇÃO - Enviando para ${phoneNumber}:`);
       console.log(`💬 ${message}`);
       console.log('✅ Mensagem "enviada" com sucesso (modo simulação)');
       return true;
@@ -145,21 +150,24 @@ export class WhatsAppService {
     try {
       // Format phone number for WhatsApp (remove special characters and ensure country code)
       let formattedNumber = phoneNumber.replace(/\D/g, '');
+      console.log(`🔄 Número original: ${phoneNumber}, Limpo: ${formattedNumber}`);
 
       // Add Brazil country code if not present
       if (!formattedNumber.startsWith('55') && formattedNumber.length === 11) {
         formattedNumber = '55' + formattedNumber;
+        console.log(`🇧🇷 Adicionando código do Brasil: ${formattedNumber}`);
       }
 
       // WhatsApp format: number@c.us
       const chatId = formattedNumber + '@c.us';
+      console.log(`📱 Chat ID final: ${chatId}`);
 
-      console.log(`📤 Enviando mensagem para ${phoneNumber} (${chatId})`);
+      console.log(`📤 Enviando mensagem via WhatsApp-Web.js para ${phoneNumber} (${chatId})`);
 
       // Send message using whatsapp-web.js
       await this.client.sendMessage(chatId, message);
 
-      console.log('✅ Mensagem enviada com sucesso!');
+      console.log(`✅ Mensagem enviada com sucesso para ${phoneNumber}!`);
       return true;
 
     } catch (error) {

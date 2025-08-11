@@ -1,6 +1,7 @@
 import * as cron from 'node-cron';
 import { storage } from '../storage';
 import { whatsappService } from './whatsapp';
+import { Employee, Contact, Settings } from '../types'; // Assuming these types are defined elsewhere
 
 export class SchedulerService {
   private reminderJob: cron.ScheduledTask | null = null;
@@ -52,21 +53,17 @@ export class SchedulerService {
 
     for (const employee of employees) {
       const birthDate = new Date(employee.birthDate);
-      
+
       // Check if tomorrow is the employee's birthday (ignoring year)
-      if (birthDate.getMonth() === tomorrow.getMonth() && 
+      if (birthDate.getMonth() === tomorrow.getMonth() &&
           birthDate.getDate() === tomorrow.getDate()) {
-        
+
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(tomorrow)) {
           continue;
         }
 
-        const message = this.formatMessage(settings.reminderTemplate, employee);
-        
-        for (const contact of activeContacts) {
-          await this.sendMessageWithRetry(employee, contact, message, 'reminder', settings);
-        }
+        await this.sendReminderMessage(employee);
       }
     }
   }
@@ -85,43 +82,89 @@ export class SchedulerService {
 
     for (const employee of employees) {
       const birthDate = new Date(employee.birthDate);
-      
+
       // Check if today is the employee's birthday (ignoring year)
-      if (birthDate.getMonth() === today.getMonth() && 
+      if (birthDate.getMonth() === today.getMonth() &&
           birthDate.getDate() === today.getDate()) {
-        
+
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(today)) {
           continue;
         }
 
-        const message = this.formatMessage(settings.birthdayTemplate, employee);
-        
-        for (const contact of activeContacts) {
-          await this.sendMessageWithRetry(employee, contact, message, 'birthday', settings);
-        }
+        await this.sendBirthdayMessage(employee);
       }
     }
   }
 
+  private async sendReminderMessage(employee: Employee): Promise<void> {
+    const settings = await storage.getSettings();
+    if (!settings) return;
+
+    const contacts = await storage.getContacts();
+    const activeContacts = contacts.filter(c => c.isActive);
+
+    if (activeContacts.length === 0) {
+      console.log('⚠️ Nenhum contato de gerência ativo encontrado');
+      return;
+    }
+
+    console.log(`⏰ Enviando lembrete para ${employee.name} aos contatos:`,
+                activeContacts.map(c => `${c.name} (${c.phone})`));
+
+    const message = this.formatMessage(settings.reminderTemplate, employee);
+
+    for (const contact of activeContacts) {
+      console.log(`📤 Preparando envio para: ${contact.name} - ${contact.phone}`);
+      await this.sendMessageWithRetry(employee, contact, message, 'reminder', settings);
+    }
+  }
+
+  private async sendBirthdayMessage(employee: Employee): Promise<void> {
+    const settings = await storage.getSettings();
+    if (!settings) return;
+
+    const contacts = await storage.getContacts();
+    const activeContacts = contacts.filter(c => c.isActive);
+
+    if (activeContacts.length === 0) {
+      console.log('⚠️ Nenhum contato de gerência ativo encontrado');
+      return;
+    }
+
+    console.log(`🎂 Enviando mensagem de aniversário para ${employee.name} aos contatos:`,
+                activeContacts.map(c => `${c.name} (${c.phone})`));
+
+    const message = this.formatMessage(settings.birthdayTemplate, employee);
+
+    for (const contact of activeContacts) {
+      console.log(`📤 Preparando envio para: ${contact.name} - ${contact.phone}`);
+      await this.sendMessageWithRetry(employee, contact, message, 'birthday', settings);
+    }
+  }
+
   private async sendMessageWithRetry(
-    employee: any,
-    contact: any,
+    employee: Employee,
+    contact: Contact,
     message: string,
-    type: 'reminder' | 'birthday',
-    settings: any
+    type: 'birthday' | 'reminder',
+    settings: Settings
   ): Promise<void> {
-    let attempts = 0;
     let success = false;
+    let attempts = 0;
     let errorMessage = '';
+
+    console.log(`🔄 Iniciando envio para: ${contact.name} (${contact.phone}) - Funcionário: ${employee.name}`);
 
     while (attempts < settings.retryAttempts && !success) {
       attempts++;
-      
+
       try {
+        console.log(`📞 Tentativa ${attempts}: Enviando para ${contact.phone}`);
         success = await whatsappService.sendMessage(contact.phone, message);
-        
+
         if (success) {
+          console.log(`✅ Mensagem enviada com sucesso para ${contact.name} (${contact.phone})`);
           // Log successful message
           await storage.createMessage({
             employeeId: employee.id,
@@ -135,18 +178,22 @@ export class SchedulerService {
           });
         } else {
           errorMessage = `Failed to send message (attempt ${attempts})`;
+          console.log(`❌ Falha no envio para ${contact.name} (${contact.phone}): ${errorMessage}`);
         }
       } catch (error) {
         errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.log(`❌ Erro no envio para ${contact.name} (${contact.phone}): ${errorMessage}`);
       }
 
       if (!success && attempts < settings.retryAttempts) {
+        console.log(`⏳ Aguardando ${settings.retryInterval} minutos antes da próxima tentativa...`);
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, settings.retryInterval * 60 * 1000));
       }
     }
 
     if (!success) {
+      console.log(`💥 Falha definitiva no envio para ${contact.name} (${contact.phone})`);
       // Log failed message
       await storage.createMessage({
         employeeId: employee.id,
@@ -161,10 +208,10 @@ export class SchedulerService {
     }
   }
 
-  private formatMessage(template: string, employee: any): string {
+  private formatMessage(template: string, employee: Employee): string {
     const birthDate = new Date(employee.birthDate);
     const age = new Date().getFullYear() - birthDate.getFullYear();
-    
+
     return template
       .replace(/\[NOME\]/g, employee.name)
       .replace(/\[CARGO\]/g, employee.position)

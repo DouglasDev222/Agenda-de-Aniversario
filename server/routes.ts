@@ -237,15 +237,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Phone number and message are required" });
       }
       
+      console.log(`🧪 Teste manual: Enviando mensagem para ${phoneNumber}`);
+      console.log(`📝 Conteúdo: ${message}`);
+      
       const success = await whatsappService.sendMessage(phoneNumber, message);
       
       if (success) {
+        console.log(`✅ Teste manual: Mensagem enviada com sucesso para ${phoneNumber}`);
         res.json({ success: true, message: "Test message sent successfully" });
       } else {
+        console.log(`❌ Teste manual: Falha no envio para ${phoneNumber}`);
         res.status(500).json({ error: "Failed to send test message" });
       }
     } catch (error) {
+      console.log(`💥 Teste manual: Erro no envio para ${phoneNumber}:`, error);
       res.status(500).json({ error: "Failed to send test message" });
+    }
+  });
+
+  // Debug endpoint to check contacts
+  app.get("/api/debug/contacts", async (_req, res) => {
+    try {
+      const contacts = await storage.getContacts();
+      const activeContacts = contacts.filter(c => c.isActive);
+      
+      console.log(`🔍 DEBUG - Total de contatos: ${contacts.length}`);
+      console.log(`🔍 DEBUG - Contatos ativos: ${activeContacts.length}`);
+      
+      contacts.forEach(contact => {
+        console.log(`📇 Contato: ${contact.name} | Telefone: ${contact.phone} | Ativo: ${contact.isActive} | Função: ${contact.role}`);
+      });
+      
+      res.json({
+        totalContacts: contacts.length,
+        activeContacts: activeContacts.length,
+        contacts: contacts.map(c => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          role: c.role,
+          isActive: c.isActive
+        }))
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch contacts for debug" });
     }
   });
 
