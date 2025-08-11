@@ -152,26 +152,75 @@ export class WhatsAppService {
       let formattedNumber = phoneNumber.replace(/\D/g, '');
       console.log(`🔄 Número original: ${phoneNumber}, Limpo: ${formattedNumber}`);
 
-      // Add Brazil country code if not present
-      if (!formattedNumber.startsWith('55') && formattedNumber.length === 11) {
+      // Validação e formatação específica para números brasileiros
+      if (formattedNumber.length === 10 || formattedNumber.length === 11) {
+        // Número brasileiro sem código do país
+        if (formattedNumber.length === 10) {
+          // Celular antigo sem 9 - adicionar o 9
+          if (['11', '12', '13', '14', '15', '16', '17', '18', '19', '21', '22', '24', '27', '28', '31', '32', '33', '34', '35', '37', '38', '41', '42', '43', '44', '45', '46', '47', '48', '49', '51', '53', '54', '55', '61', '62', '63', '64', '65', '66', '67', '68', '69', '71', '73', '74', '75', '77', '79', '81', '82', '83', '84', '85', '86', '87', '88', '89', '91', '92', '93', '94', '95', '96', '97', '98', '99'].includes(formattedNumber.substring(0, 2))) {
+            const ddd = formattedNumber.substring(0, 2);
+            const numero = formattedNumber.substring(2);
+            formattedNumber = ddd + '9' + numero;
+            console.log(`📱 Adicionado 9º dígito: ${formattedNumber}`);
+          }
+        }
         formattedNumber = '55' + formattedNumber;
         console.log(`🇧🇷 Adicionando código do Brasil: ${formattedNumber}`);
+      } else if (formattedNumber.length === 12 && formattedNumber.startsWith('55')) {
+        // Número brasileiro com código do país mas sem 9º dígito
+        const ddd = formattedNumber.substring(2, 4);
+        const numero = formattedNumber.substring(4);
+        if (numero.length === 8) {
+          formattedNumber = '55' + ddd + '9' + numero;
+          console.log(`📱 Adicionado 9º dígito no número com código do país: ${formattedNumber}`);
+        }
+      } else if (formattedNumber.length === 13 && formattedNumber.startsWith('55')) {
+        // Número brasileiro completo - verificar se tem 9º dígito
+        const ddd = formattedNumber.substring(2, 4);
+        const primeiroDigito = formattedNumber.substring(4, 5);
+        if (primeiroDigito !== '9') {
+          const numero = formattedNumber.substring(4);
+          formattedNumber = '55' + ddd + '9' + numero;
+          console.log(`📱 Adicionado 9º dígito no número completo: ${formattedNumber}`);
+        }
       }
 
       // WhatsApp format: number@c.us
       const chatId = formattedNumber + '@c.us';
       console.log(`📱 Chat ID final: ${chatId}`);
 
+      // Verificar se o número existe no WhatsApp antes de enviar
+      try {
+        const numberId = await this.client.getNumberId(chatId);
+        if (numberId) {
+          console.log(`✅ Número ${formattedNumber} está registrado no WhatsApp`);
+        } else {
+          console.log(`⚠️ Número ${formattedNumber} NÃO está registrado no WhatsApp`);
+          return false;
+        }
+      } catch (checkError) {
+        console.log(`⚠️ Não foi possível verificar se o número está no WhatsApp:`, checkError);
+      }
+
       console.log(`📤 Enviando mensagem via WhatsApp-Web.js para ${phoneNumber} (${chatId})`);
 
       // Send message using whatsapp-web.js
-      await this.client.sendMessage(chatId, message);
+      const result = await this.client.sendMessage(chatId, message);
 
       console.log(`✅ Mensagem enviada com sucesso para ${phoneNumber}!`);
+      console.log(`📋 ID da mensagem: ${result.id}`);
+      console.log(`🕐 Timestamp: ${result.timestamp}`);
+      
       return true;
 
     } catch (error) {
       console.error(`❌ Falha ao enviar mensagem para ${phoneNumber}:`, error);
+      
+      // Log detalhado do erro
+      if (error.message) {
+        console.error(`❌ Mensagem do erro: ${error.message}`);
+      }
+      
       return false;
     }
   }
