@@ -54,12 +54,12 @@ export default function Settings() {
       if (data.connected) {
         toast({
           title: "Sucesso",
-          description: "WhatsApp conectado com sucesso!",
+          description: "WhatsApp conectado com sucesso! Conexão real ativa.",
         });
       } else {
         toast({
           title: "Atenção",
-          description: "WhatsApp não está conectado. Verifique a conexão.",
+          description: "WhatsApp não está conectado. Sistema funcionando apenas em modo simulação.",
           variant: "destructive",
         });
       }
@@ -227,12 +227,12 @@ export default function Settings() {
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <h4 className="font-medium text-gray-900">Status da Conexão</h4>
-                <p className="text-sm text-gray-500">WhatsApp Web via Puppeteer</p>
+                <p className="text-sm text-gray-500">WhatsApp Web / Business API</p>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                  Conectado
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1"></div>
+                  Modo Simulação
                 </span>
               </div>
             </div>

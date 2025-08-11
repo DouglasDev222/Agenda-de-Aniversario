@@ -169,12 +169,22 @@ export class WhatsAppService {
   }
 
   async testConnection(): Promise<boolean> {
-    if (this.simulateMode) {
-      console.log('🔍 Testando conexão WhatsApp (modo simulação)');
-      return this.isConnected;
+    // Se estiver usando Business API, verificar se está configurada
+    if (this.businessAPI && this.businessAPI.isConfigured()) {
+      console.log('🔍 Testando conexão WhatsApp Business API');
+      return this.businessAPI.isConfigured();
     }
 
-    if (!this.client) return false;
+    // Se estiver em modo simulação, retornar false para indicar que não há conexão real
+    if (this.simulateMode) {
+      console.log('🔍 Testando conexão WhatsApp (modo simulação - sem conexão real)');
+      return false;
+    }
+
+    if (!this.client) {
+      console.log('❌ Cliente WhatsApp não inicializado');
+      return false;
+    }
 
     try {
       const state = await this.client.getState();
@@ -207,12 +217,18 @@ export class WhatsAppService {
     status: string; 
     qrCode: string | null; 
     simulateMode: boolean;
+    realConnection: boolean;
   } {
+    // Verificar se há uma conexão real (Business API ou WhatsApp-Web.js)
+    const hasRealConnection = (this.businessAPI && this.businessAPI.isConfigured()) || 
+                              (!this.simulateMode && this.isConnected);
+
     return {
       isConnected: this.isConnected,
       status: this.connectionStatus,
       qrCode: this.qrCode,
-      simulateMode: this.simulateMode
+      simulateMode: this.simulateMode,
+      realConnection: hasRealConnection
     };
   }
 
