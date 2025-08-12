@@ -48,29 +48,18 @@ export class SchedulerService {
 
     if (activeContacts.length === 0) return;
 
-    // Usar fuso horário de São Paulo para cálculos de data
-    const now = new Date();
-    const brazilTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    const tomorrow = new Date(brazilTime);
+    const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    console.log(`🕐 Verificando lembretes para amanhã: ${tomorrow.toLocaleDateString('pt-BR')}`);
-
     for (const employee of employees) {
-      // Parse da data de nascimento no fuso horário local
-      const birthDate = new Date(employee.birthDate + 'T00:00:00');
-
-      console.log(`🔍 Verificando ${employee.name}: nascimento ${birthDate.getDate()}/${birthDate.getMonth() + 1}, amanhã será ${tomorrow.getDate()}/${tomorrow.getMonth() + 1}`);
+      const birthDate = new Date(employee.birthDate);
 
       // Check if tomorrow is the employee's birthday (ignoring year)
       if (birthDate.getMonth() === tomorrow.getMonth() &&
           birthDate.getDate() === tomorrow.getDate()) {
 
-        console.log(`🎂 LEMBRETE: ${employee.name} faz aniversário amanhã!`);
-
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(tomorrow)) {
-          console.log(`⏭️ Pulando fim de semana para ${employee.name}`);
           continue;
         }
 
@@ -89,28 +78,17 @@ export class SchedulerService {
 
     if (activeContacts.length === 0) return;
 
-    // Usar fuso horário de São Paulo para cálculos de data
-    const now = new Date();
-    const brazilTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    const today = new Date(brazilTime);
-
-    console.log(`🕐 Verificando aniversários de hoje: ${today.toLocaleDateString('pt-BR')}`);
+    const today = new Date();
 
     for (const employee of employees) {
-      // Parse da data de nascimento no fuso horário local
-      const birthDate = new Date(employee.birthDate + 'T00:00:00');
-
-      console.log(`🔍 Verificando ${employee.name}: nascimento ${birthDate.getDate()}/${birthDate.getMonth() + 1}, hoje é ${today.getDate()}/${today.getMonth() + 1}`);
+      const birthDate = new Date(employee.birthDate);
 
       // Check if today is the employee's birthday (ignoring year)
       if (birthDate.getMonth() === today.getMonth() &&
           birthDate.getDate() === today.getDate()) {
 
-        console.log(`🎉 ANIVERSÁRIO: ${employee.name} faz aniversário hoje!`);
-
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(today)) {
-          console.log(`⏭️ Pulando fim de semana para ${employee.name}`);
           continue;
         }
 
