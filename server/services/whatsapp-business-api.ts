@@ -30,7 +30,7 @@ export class WhatsAppBusinessAPIService {
         },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
-          to: to.replace(/\D/g, ''), // Remove formatação
+          to: to.replace(/\D/g, '').replace(/^55/, ''), // Remove formatação e código do país
           type: 'text',
           text: {
             body: message
