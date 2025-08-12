@@ -152,9 +152,9 @@ export class WhatsAppService {
       let formattedNumber = phoneNumber.replace(/\D/g, '');
       console.log(`🔄 Número original: ${phoneNumber}, Limpo: ${formattedNumber}`);
 
-      // Formatação simplificada para números brasileiros
+      // Formatação para números brasileiros
       if (formattedNumber.length === 10) {
-        // Número com 10 dígitos (DDD + 8 dígitos) - adicionar 9 e código do país
+        // Número com 10 dígitos (DDD + 8 dígitos) - adicionar 9º dígito
         const ddd = formattedNumber.substring(0, 2);
         const numero = formattedNumber.substring(2);
         formattedNumber = ddd + '9' + numero;
@@ -163,8 +163,8 @@ export class WhatsAppService {
 
       if (formattedNumber.length === 11 && !formattedNumber.startsWith('55')) {
         // Número brasileiro com 11 dígitos - adicionar código do país
-        formattedNumber = formattedNumber;
-        console.log(`🇧🇷 Número brasileiro sem código: ${formattedNumber}`);
+        formattedNumber = '55' + formattedNumber;
+        console.log(`🇧🇷 Adicionado código do país: ${formattedNumber}`);
       }
 
       // WhatsApp format: number@c.us

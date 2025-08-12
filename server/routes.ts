@@ -268,12 +268,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const originalFormatted = formattedNumber;
       
-      // Aplicar formatação simplificada
+      // Aplicar formatação completa
       if (formattedNumber.length === 10) {
         // Número com 10 dígitos - adicionar 9º dígito
         const ddd = formattedNumber.substring(0, 2);
         const numero = formattedNumber.substring(2);
         formattedNumber = ddd + '9' + numero;
+      }
+      
+      if (formattedNumber.length === 11 && !formattedNumber.startsWith('55')) {
+        // Adicionar código do país
+        formattedNumber = '55' + formattedNumber;
       }
       
       const chatId = formattedNumber + '@c.us';

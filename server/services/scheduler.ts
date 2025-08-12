@@ -48,18 +48,30 @@ export class SchedulerService {
 
     if (activeContacts.length === 0) return;
 
-    const tomorrow = new Date();
+    // Usar fuso horário brasileiro (UTC-3)
+    const now = new Date();
+    const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const tomorrow = new Date(brazilTime);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    console.log(`🇧🇷 Verificando lembretes para amanhã: ${tomorrow.toLocaleDateString('pt-BR')}`);
+
     for (const employee of employees) {
-      const birthDate = new Date(employee.birthDate);
+      // Corrigir parsing da data de nascimento
+      const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+
+      console.log(`👤 ${employee.name} - Nascimento: ${birthDate.toLocaleDateString('pt-BR')} (mês: ${birthDate.getMonth()}, dia: ${birthDate.getDate()})`);
+      console.log(`📅 Amanhã: mês ${tomorrow.getMonth()}, dia ${tomorrow.getDate()}`);
 
       // Check if tomorrow is the employee's birthday (ignoring year)
       if (birthDate.getMonth() === tomorrow.getMonth() &&
           birthDate.getDate() === tomorrow.getDate()) {
 
+        console.log(`🎉 Lembrete: ${employee.name} faz aniversário amanhã!`);
+
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(tomorrow)) {
+          console.log(`📅 Pulando fim de semana para ${employee.name}`);
           continue;
         }
 
@@ -78,17 +90,28 @@ export class SchedulerService {
 
     if (activeContacts.length === 0) return;
 
-    const today = new Date();
+    // Usar fuso horário brasileiro (UTC-3)
+    const now = new Date();
+    const today = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+
+    console.log(`🇧🇷 Verificando aniversários de hoje: ${today.toLocaleDateString('pt-BR')}`);
 
     for (const employee of employees) {
-      const birthDate = new Date(employee.birthDate);
+      // Corrigir parsing da data de nascimento
+      const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+
+      console.log(`👤 ${employee.name} - Nascimento: ${birthDate.toLocaleDateString('pt-BR')} (mês: ${birthDate.getMonth()}, dia: ${birthDate.getDate()})`);
+      console.log(`📅 Hoje: mês ${today.getMonth()}, dia ${today.getDate()}`);
 
       // Check if today is the employee's birthday (ignoring year)
       if (birthDate.getMonth() === today.getMonth() &&
           birthDate.getDate() === today.getDate()) {
 
+        console.log(`🎂 Aniversário: ${employee.name} faz aniversário hoje!`);
+
         // Skip weekends if disabled
         if (!settings.weekendsEnabled && this.isWeekend(today)) {
+          console.log(`📅 Pulando fim de semana para ${employee.name}`);
           continue;
         }
 
@@ -209,8 +232,19 @@ export class SchedulerService {
   }
 
   private formatMessage(template: string, employee: Employee): string {
-    const birthDate = new Date(employee.birthDate);
-    const age = new Date().getFullYear() - birthDate.getFullYear();
+    // Corrigir parsing da data de nascimento
+    const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+    
+    // Calcular idade considerando fuso horário brasileiro
+    const now = new Date();
+    const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    let age = brazilTime.getFullYear() - birthDate.getFullYear();
+    
+    // Ajustar idade se ainda não passou o aniversário este ano
+    const monthDiff = brazilTime.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && brazilTime.getDate() < birthDate.getDate())) {
+      age--;
+    }
 
     return template
       .replace(/\[NOME\]/g, employee.name)
