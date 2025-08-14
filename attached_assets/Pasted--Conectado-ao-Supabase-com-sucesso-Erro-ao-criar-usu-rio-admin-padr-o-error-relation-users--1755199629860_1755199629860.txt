@@ -1,0 +1,105 @@
+✅ Conectado ao Supabase com sucesso!
+❌ Erro ao criar usuário admin padrão: error: relation "users" does not exist
+    at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/node_modules/src/node-postgres/session.ts:104:19)
+    at async DatabaseStorage.getUserByUsername (/home/runner/workspace/server/storage.ts:471:20)
+    at async DatabaseStorage.createDefaultUser (/home/runner/workspace/server/storage.ts:548:29)
+    at async initializeStorage (/home/runner/workspace/server/storage.ts:616:7)
+    at async registerRoutes (/home/runner/workspace/server/routes.ts:11:3)
+    at async <anonymous> (/home/runner/workspace/server/index.ts:43:18) {
+  length: 105,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '100',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+❌ Tentativa 1 falhou: relation "users" does not exist
+Aguardando 2s antes da próxima tentativa...
+Tentativa 2/3 de conexão...
+✅ Conectado ao Supabase com sucesso!
+❌ Erro ao criar usuário admin padrão: error: relation "users" does not exist
+    at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/node_modules/src/node-postgres/session.ts:104:19)
+    at async DatabaseStorage.getUserByUsername (/home/runner/workspace/server/storage.ts:471:20)
+    at async DatabaseStorage.createDefaultUser (/home/runner/workspace/server/storage.ts:548:29)
+    at async initializeStorage (/home/runner/workspace/server/storage.ts:616:7)
+    at async registerRoutes (/home/runner/workspace/server/routes.ts:11:3)
+    at async <anonymous> (/home/runner/workspace/server/index.ts:43:18) {
+  length: 105,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '100',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+❌ Tentativa 2 falhou: relation "users" does not exist
+Aguardando 2s antes da próxima tentativa...
+Tentativa 3/3 de conexão...
+✅ Conectado ao Supabase com sucesso!
+❌ Erro ao criar usuário admin padrão: error: relation "users" does not exist
+    at /home/runner/workspace/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/node_modules/src/node-postgres/session.ts:104:19)
+    at async DatabaseStorage.getUserByUsername (/home/runner/workspace/server/storage.ts:471:20)
+    at async DatabaseStorage.createDefaultUser (/home/runner/workspace/server/storage.ts:548:29)
+    at async initializeStorage (/home/runner/workspace/server/storage.ts:616:7)
+    at async registerRoutes (/home/runner/workspace/server/routes.ts:11:3)
+    at async <anonymous> (/home/runner/workspace/server/index.ts:43:18) {
+  length: 105,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '100',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+❌ Tentativa 3 falhou: relation "users" does not exist
+❌ Todas as tentativas de conexão falharam
+Último erro: relation "users" does not exist
+/home/runner/workspace/server/storage.ts:648
+  throw new Error(`Falha na conexão com Supabase após ${maxRetries} tentativas: ${lastError.message}`);
+        ^
+
+
+Error: Falha na conexão com Supabase após 3 tentativas: relation "users" does not exist
+    at initializeStorage (/home/runner/workspace/server/storage.ts:648:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async registerRoutes (/home/runner/workspace/server/routes.ts:11:3)
+    at async <anonymous> (/home/runner/workspace/server/index.ts:43:18)
+
+Node.js v20.19.3
