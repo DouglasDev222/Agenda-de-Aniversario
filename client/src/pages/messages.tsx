@@ -23,15 +23,19 @@ export default function Messages() {
     queryFn: api.messages.getAll,
   });
 
-  const { data: employees } = useQuery({
+  const { data: employeesData } = useQuery({
     queryKey: ["/api/employees"],
-    queryFn: api.employees.getAll,
+    queryFn: () => api.employees.getAll({ limit: 1000 }), // Get all employees for lookup
   });
 
-  const { data: contacts } = useQuery({
+  const employees = employeesData?.employees || [];
+
+  const { data: contactsData } = useQuery({
     queryKey: ["/api/contacts"],
     queryFn: api.contacts.getAll,
   });
+
+  const contacts = Array.isArray(contactsData) ? contactsData : [];
 
   const testConnectionMutation = useMutation({
     mutationFn: api.whatsapp.testConnection,
