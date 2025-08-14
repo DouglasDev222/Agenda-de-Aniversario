@@ -50,7 +50,7 @@ export const api = {
     login: async (credentials: { username: string; password: string }) =>
       request<{ token: string; user: any }>("/auth/login", {
         method: "POST",
-        body: JSON.stringify(credentials),
+        body: JSON.JSON.stringify(credentials),
       }),
 
     me: async () => request<any>("/auth/me"),
@@ -123,4 +123,34 @@ export const api = {
   stats: {
     get: () => fetch("/api/stats").then(res => res.json()),
   },
+};
+
+const apiRequest = async (method: string, url: string, data?: any) => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add authorization header if token exists
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const config: RequestInit = {
+    method,
+    headers,
+  };
+
+  if (data) {
+    config.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, config);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
 };
