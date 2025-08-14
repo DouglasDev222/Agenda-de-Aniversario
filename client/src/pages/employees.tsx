@@ -9,10 +9,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmployeeModal from "@/components/modals/employee-modal";
+import ImportEmployeesModal from "@/components/modals/import-employees-modal";
 import type { Employee } from "@shared/schema";
 
 export default function Employees() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [deleteEmployee, setDeleteEmployee] = useState<Employee | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
@@ -247,14 +249,20 @@ export default function Employees() {
                 </Select>
               </div>
 
-              <div className="sm:col-span-2 lg:col-span-1">
+              <div className="sm:col-span-2 lg:col-span-1 space-y-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   &nbsp;
                 </label>
-                <Button onClick={handleAdd} className="w-full">
-                  <i className="fas fa-plus mr-2"></i>
-                  Adicionar Colaborador
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button onClick={handleAdd} className="w-full">
+                    <i className="fas fa-plus mr-2"></i>
+                    Adicionar
+                  </Button>
+                  <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="w-full">
+                    <i className="fas fa-file-import mr-2"></i>
+                    Importar
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -466,6 +474,12 @@ export default function Employees() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         employee={selectedEmployee}
+      />
+
+      {/* Import Modal */}
+      <ImportEmployeesModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
       />
 
       {/* Delete Confirmation Dialog */}
