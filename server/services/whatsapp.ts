@@ -148,55 +148,46 @@ export class WhatsAppService {
     }
 
     try {
-      // Format phone number for WhatsApp (remove special characters)
+      // Remove tudo que não é número
       let formattedNumber = phoneNumber.replace(/\D/g, '');
       console.log(`🔄 Número original: ${phoneNumber}, Limpo: ${formattedNumber}`);
 
-      // Formatação para números brasileiros
-      if (formattedNumber.length === 10) {
-        // Número com 10 dígitos (DDD + 8 dígitos) - adicionar 9º dígito
-        const ddd = formattedNumber.substring(0, 2);
-        const numero = formattedNumber.substring(2);
-        formattedNumber = ddd + '9' + numero;
-        console.log(`📱 Adicionado 9º dígito: ${formattedNumber}`);
-      }
-
-      if (formattedNumber.length === 11 && !formattedNumber.startsWith('55')) {
-        // Número brasileiro com 11 dígitos - adicionar código do país
+      // Se for número brasileiro sem código do país, adiciona "55"
+      if (!formattedNumber.startsWith('55')) {
         formattedNumber = '55' + formattedNumber;
         console.log(`🇧🇷 Adicionado código do país: ${formattedNumber}`);
       }
 
-      // WhatsApp format: number@c.us
+      // Monta o chatId no formato WhatsApp
       const chatId = formattedNumber + '@c.us';
       console.log(`📱 Chat ID final: ${chatId}`);
 
-      // Verificar se o número existe no WhatsApp antes de enviar
+      // Verifica se o número existe no WhatsApp
       try {
-        const numberId = await this.client.getNumberId(chatId);
+        const numberId = await this.client.getNumberId(formattedNumber);
         if (numberId) {
           console.log(`✅ Número ${formattedNumber} está registrado no WhatsApp`);
         } else {
           console.log(`⚠️ Número ${formattedNumber} NÃO está registrado no WhatsApp`);
           return false;
         }
-      } catch (checkError) {
-        console.log(`⚠️ Não foi possível verificar se o número está no WhatsApp:`, checkError);
-      }
+    } catch (checkError) {
+      console.log(`⚠️ Não foi possível verificar se o número está no WhatsApp:`, checkError);
+    }
 
-      console.log(`📤 Enviando mensagem via WhatsApp-Web.js para ${phoneNumber} (${chatId})`);
+  console.log(`📤 Enviando mensagem via WhatsApp-Web.js para ${phoneNumber} (${chatId})`);
 
-      // Send message using whatsapp-web.js
-      const result = await this.client.sendMessage(chatId, message);
+  // Envia a mensagem
+  const result = await this.client.sendMessage(chatId, message);
 
-      console.log(`✅ Mensagem enviada com sucesso para ${phoneNumber}!`);
-      console.log(`📋 ID da mensagem: ${result.id}`);
-      console.log(`🕐 Timestamp: ${result.timestamp}`);
-      
-      return true;
+  console.log(`✅ Mensagem enviada com sucesso para ${phoneNumber}!`);
+  console.log(`📋 ID da mensagem: ${result.id}`);
+  console.log(`🕐 Timestamp: ${result.timestamp}`);
+  
+  return true;
 
-    } catch (error) {
-      console.error(`❌ Falha ao enviar mensagem para ${phoneNumber}:`, error);
+} catch (error) {
+  console.error(`❌ Falha ao enviar mensagem para ${phoneNumber}:`, error);
       
       // Log detalhado do erro
       if (error.message) {

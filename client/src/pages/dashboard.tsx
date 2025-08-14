@@ -201,7 +201,7 @@ export default function Dashboard() {
             <div className="space-y-3 lg:space-y-4">
               {stats?.recentMessages?.length > 0 ? (
                 stats.recentMessages.map((message: any) => {
-                  const employee = employees?.find(emp => emp.id === message.employeeId);
+                  const employee = employees && Array.isArray(employees) ? employees.find((emp: any) => emp.id === message.employeeId) : null;
                   const isSuccess = message.status === 'sent';
                   
                   return (

@@ -50,22 +50,22 @@ export class SchedulerService {
 
     // Usar fuso horário brasileiro (UTC-3)
     const now = new Date();
-    const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const brazilTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
     const tomorrow = new Date(brazilTime);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    console.log(`🇧🇷 Verificando lembretes para amanhã: ${tomorrow.toLocaleDateString('pt-BR')}`);
+    console.log(`🇧🇷 Verificando lembretes para amanhã: ${tomorrow.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
 
     for (const employee of employees) {
-      // Corrigir parsing da data de nascimento
-      const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+      const birthDate = new Date(employee.birthDate + 'T00:00:00'); // Parse as local time
 
-      console.log(`👤 ${employee.name} - Nascimento: ${birthDate.toLocaleDateString('pt-BR')} (mês: ${birthDate.getMonth()}, dia: ${birthDate.getDate()})`);
+      const birthDateBrazil = new Date(birthDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+
+      console.log(`👤 ${employee.name} - Nascimento: ${birthDateBrazil.toLocaleDateString('pt-BR')} (mês: ${birthDateBrazil.getMonth()}, dia: ${birthDateBrazil.getDate()})`);
       console.log(`📅 Amanhã: mês ${tomorrow.getMonth()}, dia ${tomorrow.getDate()}`);
 
-      // Check if tomorrow is the employee's birthday (ignoring year)
-      if (birthDate.getMonth() === tomorrow.getMonth() &&
-          birthDate.getDate() === tomorrow.getDate()) {
+      if (birthDateBrazil.getMonth() === tomorrow.getMonth() &&
+          birthDateBrazil.getDate() === tomorrow.getDate()) {
 
         console.log(`🎉 Lembrete: ${employee.name} faz aniversário amanhã!`);
 
@@ -92,20 +92,19 @@ export class SchedulerService {
 
     // Usar fuso horário brasileiro (UTC-3)
     const now = new Date();
-    const today = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const today = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
 
-    console.log(`🇧🇷 Verificando aniversários de hoje: ${today.toLocaleDateString('pt-BR')}`);
+    console.log(`🇧🇷 Verificando aniversários de hoje: ${today.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}`);
 
     for (const employee of employees) {
-      // Corrigir parsing da data de nascimento
-      const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+      const birthDate = new Date(employee.birthDate + "T00:00:00"); // Parse as local time
+      const birthDateBrazil = new Date(birthDate.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
 
-      console.log(`👤 ${employee.name} - Nascimento: ${birthDate.toLocaleDateString('pt-BR')} (mês: ${birthDate.getMonth()}, dia: ${birthDate.getDate()})`);
+      console.log(`👤 ${employee.name} - Nascimento: ${birthDateBrazil.toLocaleDateString("pt-BR")} (mês: ${birthDateBrazil.getMonth()}, dia: ${birthDateBrazil.getDate()})`);
       console.log(`📅 Hoje: mês ${today.getMonth()}, dia ${today.getDate()}`);
 
-      // Check if today is the employee's birthday (ignoring year)
-      if (birthDate.getMonth() === today.getMonth() &&
-          birthDate.getDate() === today.getDate()) {
+      if (birthDateBrazil.getMonth() === today.getMonth() &&
+          birthDateBrazil.getDate() === today.getDate()) {
 
         console.log(`🎂 Aniversário: ${employee.name} faz aniversário hoje!`);
 
@@ -233,11 +232,11 @@ export class SchedulerService {
 
   private formatMessage(template: string, employee: Employee): string {
     // Corrigir parsing da data de nascimento
-    const birthDate = new Date(employee.birthDate + 'T00:00:00.000Z');
+    const birthDate = new Date(employee.birthDate + "T00:00:00");
     
     // Calcular idade considerando fuso horário brasileiro
     const now = new Date();
-    const brazilTime = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const brazilTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
     let age = brazilTime.getFullYear() - birthDate.getFullYear();
     
     // Ajustar idade se ainda não passou o aniversário este ano
@@ -250,7 +249,7 @@ export class SchedulerService {
       .replace(/\[NOME\]/g, employee.name)
       .replace(/\[CARGO\]/g, employee.position)
       .replace(/\[IDADE\]/g, age.toString())
-      .replace(/\[DATA_NASCIMENTO\]/g, birthDate.toLocaleDateString('pt-BR'));
+      .replace(/\[DATA_NASCIMENTO\]/g, birthDate.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }));
   }
 
   private isWeekend(date: Date): boolean {

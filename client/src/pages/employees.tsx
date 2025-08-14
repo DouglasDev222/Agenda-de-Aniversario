@@ -57,36 +57,56 @@ export default function Employees() {
   };
 
   const calculateAge = (birthDate: string) => {
-    // Handle timezone properly to prevent date shifting
     const birth = new Date(birthDate + 'T00:00:00');
     const today = new Date();
+
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
+    const dayDiff = today.getDate() - birth.getDate();
+
+    let status = '';
     
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    // Check if birthday hasn't happened this year yet
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
       age--;
+      status = 'completará';
+    } 
+    // Check if birthday is today
+    else if (monthDiff === 0 && dayDiff === 0) {
+      status = 'completando';
+    } 
+    // Birthday already happened this year
+    else {
+      status = 'completou';
     }
-    
-    return age;
+
+    return { age, status };
   };
 
   const getNextBirthday = (birthDate: string) => {
-    // Handle timezone properly to prevent date shifting
     const birth = new Date(birthDate + 'T00:00:00');
+    
+    // Get today in Brazilian timezone - simplified
     const today = new Date();
     const thisYear = today.getFullYear();
     
+    // Create birthday for this year
     let nextBirthday = new Date(thisYear, birth.getMonth(), birth.getDate());
     
-    if (nextBirthday < today) {
+    // Compare dates properly - if birthday passed this year, move to next year
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const birthdayThisYear = new Date(thisYear, birth.getMonth(), birth.getDate());
+    
+    if (birthdayThisYear < todayDateOnly) {
       nextBirthday = new Date(thisYear + 1, birth.getMonth(), birth.getDate());
     }
-    
-    const diffTime = nextBirthday.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
+    // Calculate days difference
+    const diffTime = nextBirthday.getTime() - todayDateOnly.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
     return {
-      date: nextBirthday.toLocaleDateString('pt-BR'),
+      date: nextBirthday.toLocaleDateString("pt-BR"),
       days: diffDays
     };
   };
@@ -104,18 +124,29 @@ export default function Employees() {
     return 'text-blue-600';
   };
 
-  const filteredEmployees = employees?.filter((employee) => {
+  const filteredEmployees = employees && Array.isArray(employees) ? employees.filter((employee) => {
     const matchesSearch = employee.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPosition = !positionFilter || positionFilter === "all" || employee.position.toLowerCase().includes(positionFilter.toLowerCase());
-    
+
     let matchesMonth = true;
     if (monthFilter && monthFilter !== "all") {
       const birthMonth = new Date(employee.birthDate + 'T00:00:00').getMonth() + 1;
       matchesMonth = birthMonth.toString() === monthFilter;
     }
-    
+
     return matchesSearch && matchesPosition && matchesMonth;
-  });
+  }).sort((a, b) => {
+    // Sort by next birthday - today first, then upcoming dates
+    const nextBirthdayA = getNextBirthday(a.birthDate);
+    const nextBirthdayB = getNextBirthday(b.birthDate);
+    
+    // If days are equal, sort alphabetically by name
+    if (nextBirthdayA.days === nextBirthdayB.days) {
+      return a.name.localeCompare(b.name);
+    }
+    
+    return nextBirthdayA.days - nextBirthdayB.days;
+  }) : [];
 
   const handleEdit = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -175,7 +206,7 @@ export default function Employees() {
                 />
               </div>
             </div>
-            
+
             {/* Filters row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
@@ -195,7 +226,7 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mês de aniversário
@@ -221,7 +252,7 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   &nbsp;
@@ -252,9 +283,6 @@ export default function Employees() {
                       Colaborador
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cargo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data de Nascimento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -271,7 +299,7 @@ export default function Employees() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredEmployees?.map((employee) => {
                     const nextBirthday = getNextBirthday(employee.birthDate);
-                    
+
                     return (
                       <tr key={employee.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -283,22 +311,20 @@ export default function Employees() {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                              {employee.email && (
-                                <div className="text-sm text-gray-500">{employee.email}</div>
-                              )}
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                                {employee.position}
+                              </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {employee.position}
-                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(employee.birthDate + 'T00:00:00').toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateAge(employee.birthDate)} anos
+                          {(() => {
+                            const ageInfo = calculateAge(employee.birthDate);
+                            return `${ageInfo.age} anos (${ageInfo.status})`;
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-gray-900">{nextBirthday.date}</span>
@@ -333,7 +359,7 @@ export default function Employees() {
             <div className="divide-y divide-gray-200">
               {filteredEmployees?.map((employee) => {
                 const nextBirthday = getNextBirthday(employee.birthDate);
-                
+
                 return (
                   <div key={employee.id} className="p-4 hover:bg-gray-50">
                     <div className="flex items-start space-x-3">
@@ -342,21 +368,18 @@ export default function Employees() {
                           {getInitials(employee.name)}
                         </span>
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h3 className="text-sm font-medium text-gray-900 truncate">
                               {employee.name}
                             </h3>
-                            {employee.email && (
-                              <p className="text-sm text-gray-500 truncate">{employee.email}</p>
-                            )}
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
                               {employee.position}
                             </span>
                           </div>
-                          
+
                           <div className="flex space-x-2 ml-2">
                             <button
                               onClick={() => handleEdit(employee)}
@@ -372,7 +395,7 @@ export default function Employees() {
                             </button>
                           </div>
                         </div>
-                        
+
                         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <span className="text-gray-500">Nascimento:</span>
@@ -382,7 +405,12 @@ export default function Employees() {
                           </div>
                           <div>
                             <span className="text-gray-500">Idade:</span>
-                            <p className="text-gray-900 font-medium">{calculateAge(employee.birthDate)} anos</p>
+                            <p className="text-gray-900 font-medium">
+                              {(() => {
+                                const ageInfo = calculateAge(employee.birthDate);
+                                return `${ageInfo.age} anos (${ageInfo.status})`;
+                              })()}
+                            </p>
                           </div>
                           <div className="col-span-2">
                             <span className="text-gray-500">Próximo aniversário:</span>
@@ -401,7 +429,7 @@ export default function Employees() {
               })}
             </div>
           </div>
-          
+
           {/* Empty State */}
           {filteredEmployees?.length === 0 && (
             <div className="text-center py-12 text-gray-500">
