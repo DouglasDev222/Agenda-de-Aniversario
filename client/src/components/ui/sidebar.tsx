@@ -202,11 +202,11 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden border-0 shadow-lg"
+            className="w-[--sidebar-width] bg-white dark:bg-gray-900 p-0 text-sidebar-foreground [&>button]:hidden border-0 shadow-lg"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-                backgroundColor: "hsl(var(--sidebar))",
+                backgroundColor: "white",
               } as React.CSSProperties
             }
             side={side}
@@ -215,7 +215,7 @@ const Sidebar = React.forwardRef<
               <SheetTitle>Sidebar</SheetTitle>
               <SheetDescription>Displays the mobile sidebar.</SheetDescription>
             </SheetHeader>
-            <div className="flex h-full w-full flex-col">{children}</div>
+            <div className="flex h-full w-full flex-col bg-white dark:bg-gray-900">{children}</div>
           </SheetContent>
         </Sheet>
       )
