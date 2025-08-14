@@ -50,7 +50,7 @@ export const api = {
     login: async (credentials: { username: string; password: string }) =>
       request<{ token: string; user: any }>("/auth/login", {
         method: "POST",
-        body: JSON.JSON.stringify(credentials),
+        body: JSON.stringify(credentials),
       }),
 
     me: async () => request<any>("/auth/me"),
@@ -77,10 +77,10 @@ export const api = {
 
   // Employee API
   employees: {
-    getAll: () => fetch("/api/employees").then(res => res.json()) as Promise<Employee[]>,
-    create: (data: any) => apiRequest("POST", "/api/employees", data),
-    update: (id: string, data: any) => apiRequest("PUT", `/api/employees/${id}`, data),
-    delete: (id: string) => apiRequest("DELETE", `/api/employees/${id}`),
+    getAll: () => request<Employee[]>("/employees"),
+    create: (data: any) => request<any>("/employees", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) => request<any>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/employees/${id}`, { method: "DELETE" }),
   },
 
   // Contact API
@@ -103,54 +103,25 @@ export const api = {
 
   // Message API
   messages: {
-    getAll: () => fetch("/api/messages").then(res => res.json()) as Promise<Message[]>,
+    getAll: () => request<Message[]>("/messages"),
   },
 
   // Settings API
   settings: {
-    get: () => fetch("/api/settings").then(res => res.json()) as Promise<Settings>,
-    save: (data: any) => apiRequest("POST", "/api/settings", data),
+    get: () => request<Settings>("/settings"),
+    save: (data: any) => request<any>("/settings", { method: "POST", body: JSON.stringify(data) }),
   },
 
   // WhatsApp API
   whatsapp: {
-    testConnection: () => apiRequest("POST", "/api/whatsapp/test-connection"),
+    testConnection: () => request<any>("/whatsapp/test-connection", { method: "POST" }),
     sendTest: (data: { phoneNumber: string; message: string }) =>
-      apiRequest("POST", "/api/whatsapp/send-test", data),
+      request<any>("/whatsapp/send-test", { method: "POST", body: JSON.stringify(data) }),
   },
 
   // Stats API
   stats: {
-    get: () => fetch("/api/stats").then(res => res.json()),
+    get: () => request<any>("/stats"),
   },
 };
 
-const apiRequest = async (method: string, url: string, data?: any) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  // Add authorization header if token exists
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const config: RequestInit = {
-    method,
-    headers,
-  };
-
-  if (data) {
-    config.body = JSON.stringify(data);
-  }
-
-  const response = await fetch(url, config);
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || `HTTP ${response.status}`);
-  }
-
-  return response.json();
-};
