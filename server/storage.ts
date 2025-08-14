@@ -59,6 +59,7 @@ export interface IStorage {
   getUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | null>;
   deleteUser(id: string): Promise<boolean>;
+  createDefaultUser(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -299,6 +300,11 @@ export class MemStorage implements IStorage {
     this.users.set(id, updatedUser);
     return true;
   }
+
+  async createDefaultUser(): Promise<void> {
+    // For MemStorage, the default admin user is already created in initializeDefaults
+    console.log('✅ Usuário admin padrão já existe no MemStorage');
+  }
 }
 
 // PostgreSQL Database Storage
@@ -534,6 +540,32 @@ export class DatabaseStorage implements IStorage {
       .set({ isActive: false })
       .where(eq(users.id, id));
     return result.rowCount > 0;
+  }
+
+  async createDefaultUser(): Promise<void> {
+    try {
+      // Check if admin user already exists
+      const existingAdmin = await this.getUserByUsername('admin');
+      if (existingAdmin) {
+        console.log('✅ Usuário admin já existe');
+        return;
+      }
+
+      console.log('🔧 Criando usuário admin padrão...');
+      
+      // Create default admin user
+      const adminUser = await this.createUser({
+        username: 'admin',
+        email: 'admin@example.com',
+        password: 'admin123',
+        role: 'admin'
+      });
+
+      console.log('✅ Usuário admin criado com sucesso:', adminUser.username);
+    } catch (error) {
+      console.error('❌ Erro ao criar usuário admin padrão:', error);
+      throw error;
+    }
   }
 }
 
