@@ -1,99 +1,121 @@
-import { Link, useLocation } from "wouter";
+import { Home, Users, MessageCircle, Settings as SettingsIcon, Phone, LogOut, User } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { useAuth } from "@/context/auth";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
 
-const navigation = [
+const getNavigation = (isAdmin: boolean) => [
   {
-    name: "Dashboard",
-    href: "/",
-    icon: "fas fa-chart-pie",
+    title: "Dashboard",
+    url: "/",
+    icon: Home,
+    allowedRoles: ["admin", "management"],
   },
   {
-    name: "Colaboradores", 
-    href: "/employees",
-    icon: "fas fa-users",
+    title: "Colaboradores",
+    url: "/employees",
+    icon: Users,
+    allowedRoles: ["admin", "management"],
   },
   {
-    name: "Contatos da Gerência",
-    href: "/contacts",
-    icon: "fas fa-phone",
+    title: "Contatos",
+    url: "/contacts",
+    icon: Phone,
+    allowedRoles: ["admin", "management"],
   },
   {
-    name: "Mensagens",
-    href: "/messages", 
-    icon: "fas fa-message",
+    title: "Mensagens",
+    url: "/messages",
+    icon: MessageCircle,
+    allowedRoles: ["admin", "management"],
   },
   {
-    name: "WhatsApp",
-    href: "/whatsapp",
-    icon: "fas fa-qrcode",
+    title: "Usuários",
+    url: "/users",
+    icon: User,
+    allowedRoles: ["admin"],
   },
   {
-    name: "Configurações",
-    href: "/settings",
-    icon: "fas fa-cog",
+    title: "WhatsApp",
+    url: "/whatsapp",
+    icon: MessageCircle,
+    allowedRoles: ["admin"],
   },
-];
+  {
+    title: "Configurações",
+    url: "/settings",
+    icon: SettingsIcon,
+    allowedRoles: ["admin"],
+  },
+].filter(item => {
+  if (isAdmin) return true;
+  return item.allowedRoles.includes("management");
+});
 
-interface SidebarProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-}
-
-export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+export default function AppSidebar() {
   const [location] = useLocation();
+  const { user, logout, isAdmin } = useAuth();
+
+  const navigation = getNavigation(isAdmin);
 
   return (
-    <aside className={`
-      w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col
-      fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
-      lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-    `}>
-      {/* Brand Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-            <i className="fas fa-birthday-cake text-white text-lg"></i>
+    <Sidebar>
+      <SidebarHeader className="p-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <User className="w-4 h-4 text-blue-600" />
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Sistema de</h1>
-            <p className="text-sm text-gray-500">Aniversários</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
-          const isActive = location === item.href;
-          return (
-            <Link key={item.name} href={item.href}>
-              <div
-                onClick={() => onClose?.()}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600 font-medium"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <i className={item.icon}></i>
-                <span>{item.name}</span>
-              </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User Info */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-            <i className="fas fa-user text-white text-sm"></i>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">Admin</p>
-            <p className="text-xs text-gray-500">Gerência</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {user?.username || 'Usuário'}
+            </p>
+            <p className="text-xs text-gray-500">
+              {user?.role === 'admin' ? 'Administrador' : 'Gerência'}
+            </p>
           </div>
         </div>
-      </div>
-    </aside>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigation.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={logout}>
+              <LogOut />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

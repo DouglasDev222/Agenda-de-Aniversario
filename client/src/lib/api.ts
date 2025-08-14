@@ -1,7 +1,76 @@
 import { apiRequest } from "./queryClient";
 import type { Employee, Contact, Settings, Message } from "@shared/schema";
 
+const BASE_URL = "/api";
+
+async function request<T>(
+  url: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}${url}`, {
+    headers,
+    ...options,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      // Handle unauthorized access, e.g., redirect to login
+      // window.location.href = '/login'; // Example redirect
+      throw new Error("Unauthorized");
+    }
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(errorData.message || response.statusText);
+  }
+
+  // Handle cases where the response might be empty (e.g., 204 No Content)
+  if (response.status === 204) {
+    return {} as T; // Or appropriate empty representation
+  }
+
+  return await response.json() as T;
+}
+
+
 export const api = {
+  auth: {
+    login: async (credentials: { username: string; password: string }) =>
+      request<{ token: string; user: any }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify(credentials),
+      }),
+
+    me: async () => request<any>("/auth/me"),
+
+    logout: async () => request<{ message: string }>("/auth/logout", {
+      method: "POST",
+    }),
+  },
+
+  users: {
+    getAll: async () => request<any[]>("/users"),
+    create: async (user: any) => request<any>("/users", {
+      method: "POST",
+      body: JSON.stringify(user),
+    }),
+    update: async (id: string, user: any) => request<any>(`/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(user),
+    }),
+    delete: async (id: string) => request<void>(`/users/${id}`, {
+      method: "DELETE",
+    }),
+  },
+
   // Employee API
   employees: {
     getAll: () => fetch("/api/employees").then(res => res.json()) as Promise<Employee[]>,

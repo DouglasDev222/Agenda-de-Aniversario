@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage, storagePromise } from "./storage";
 import { whatsappService } from "./services/whatsapp";
 import { schedulerService } from "./services/scheduler";
-import { insertEmployeeSchema, insertContactSchema, insertSettingsSchema } from "@shared/schema";
+import { insertEmployeeSchema, insertContactSchema, insertSettingsSchema, insertUserSchema, loginSchema } from "@shared/schema";
+import { authenticateToken, requireAdmin, requireManagement, generateToken } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize storage first
@@ -20,8 +21,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('Failed to initialize services:', error);
   }
 
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const result = loginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: result.error });
+      }
+
+      const { username, password } = result.data;
+      const user = await storage.validateUserPassword(username, password);
+      
+      if (!user) {
+        return res.status(401).json({ error: "Credenciais inválidas" });
+      }
+
+      const token = generateToken(user.id);
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.json({ 
+        token, 
+        user: userWithoutPassword 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/auth/me", authenticateToken, async (req, res) => {
+    const { password: _, ...userWithoutPassword } = req.user!;
+    res.json(userWithoutPassword);
+  });
+
+  app.post("/api/auth/logout", authenticateToken, async (_req, res) => {
+    res.json({ message: "Logout realizado com sucesso" });
+  });
+
+  // User management routes (admin only)
+  app.get("/api/users", authenticateToken, requireAdmin, async (_req, res) => {
+    try {
+      const users = await storage.getUsers();
+      const usersWithoutPassword = users.map(({ password: _, ...user }) => user);
+      res.json(usersWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ error: "Falha ao buscar usuários" });
+    }
+  });
+
+  app.post("/api/users", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: result.error });
+      }
+      
+      const user = await storage.createUser(result.data);
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ error: "Falha ao criar usuário" });
+    }
+  });
+
   // Employee routes
-  app.get("/api/employees", async (_req, res) => {
+  app.get("/api/employees", authenticateToken, requireManagement, async (_req, res) => {
     try {
       const employees = await storage.getEmployees();
       res.json(employees);
@@ -30,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", async (req, res) => {
+  app.post("/api/employees", authenticateToken, requireManagement, async (req, res) => {
     try {
       const result = insertEmployeeSchema.safeParse(req.body);
       if (!result.success) {
@@ -44,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/employees/:id", async (req, res) => {
+  app.put("/api/employees/:id", authenticateToken, requireManagement, async (req, res) => {
     try {
       const result = insertEmployeeSchema.partial().safeParse(req.body);
       if (!result.success) {
@@ -62,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/employees/:id", async (req, res) => {
+  app.delete("/api/employees/:id", authenticateToken, requireManagement, async (req, res) => {
     try {
       const success = await storage.deleteEmployee(req.params.id);
       if (!success) {
@@ -76,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contact routes
-  app.get("/api/contacts", async (_req, res) => {
+  app.get("/api/contacts", authenticateToken, requireManagement, async (_req, res) => {
     try {
       const contacts = await storage.getContacts();
       res.json(contacts);
@@ -85,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/contacts", async (req, res) => {
+  app.post("/api/contacts", authenticateToken, requireManagement, async (req, res) => {
     try {
       const result = insertContactSchema.safeParse(req.body);
       if (!result.success) {
@@ -99,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/contacts/:id", async (req, res) => {
+  app.put("/api/contacts/:id", authenticateToken, requireManagement, async (req, res) => {
     try {
       const result = insertContactSchema.partial().safeParse(req.body);
       if (!result.success) {
@@ -117,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/contacts/:id", async (req, res) => {
+  app.delete("/api/contacts/:id", authenticateToken, requireManagement, async (req, res) => {
     try {
       const success = await storage.deleteContact(req.params.id);
       if (!success) {
@@ -131,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Message routes
-  app.get("/api/messages", async (_req, res) => {
+  app.get("/api/messages", authenticateToken, requireManagement, async (_req, res) => {
     try {
       const messages = await storage.getMessages();
       res.json(messages);
@@ -141,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings routes
-  app.get("/api/settings", async (_req, res) => {
+  app.get("/api/settings", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const settings = await storage.getSettings();
       if (!settings) {
@@ -153,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/settings", async (req, res) => {
+  app.post("/api/settings", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const result = insertSettingsSchema.safeParse(req.body);
       if (!result.success) {
@@ -172,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WhatsApp connection routes
-  app.get("/api/whatsapp/status", async (_req, res) => {
+  app.get("/api/whatsapp/status", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const status = whatsappService.getConnectionStatus();
       res.json(status);
@@ -181,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/connect", async (_req, res) => {
+  app.post("/api/whatsapp/connect", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       await whatsappService.initialize();
       const status = whatsappService.getConnectionStatus();
@@ -191,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/refresh-qr", async (_req, res) => {
+  app.post("/api/whatsapp/refresh-qr", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const qrCode = await whatsappService.refreshQRCode();
       res.json({ qrCode });
@@ -200,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/enable-simulation", async (_req, res) => {
+  app.post("/api/whatsapp/enable-simulation", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       await whatsappService.enableSimulationMode();
       const status = whatsappService.getConnectionStatus();
@@ -210,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/enable-real", async (_req, res) => {
+  app.post("/api/whatsapp/enable-real", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       await whatsappService.enableRealMode();
       const status = whatsappService.getConnectionStatus();
@@ -220,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/test-connection", async (_req, res) => {
+  app.post("/api/whatsapp/test-connection", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const connectionResult = await whatsappService.testConnection();
       res.json(connectionResult);
@@ -229,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/send-test", async (req, res) => {
+  app.post("/api/whatsapp/send-test", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { phoneNumber, message } = req.body;
       
@@ -255,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/whatsapp/check-number", async (req, res) => {
+  app.post("/api/whatsapp/check-number", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
       
@@ -300,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint to check contacts
-  app.get("/api/debug/contacts", async (_req, res) => {
+  app.get("/api/debug/contacts", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const contacts = await storage.getContacts();
       const activeContacts = contacts.filter(c => c.isActive);
@@ -329,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats endpoint for dashboard
-  app.get("/api/stats", async (_req, res) => {
+  app.get("/api/stats", authenticateToken, requireManagement, async (_req, res) => {
     try {
       const employees = await storage.getEmployees();
       const messages = await storage.getMessages();
