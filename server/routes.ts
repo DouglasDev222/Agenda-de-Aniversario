@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const position = req.query.position as string || "";
       const month = req.query.month as string || "";
       
-      const result = await storage.getEmployees(page, limit, search, position, month);
+      const result = await storage.getEmployeesPaginated(page, limit, search, position, month);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch employees" });
