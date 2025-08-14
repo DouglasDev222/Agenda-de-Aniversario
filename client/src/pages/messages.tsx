@@ -168,16 +168,16 @@ export default function Messages() {
     }
   };
 
-  const filteredMessages = (messages || []).filter((message) => {
+  const filteredMessages = Array.isArray(messages) ? messages.filter((message) => {
     return (
       !statusFilter || statusFilter === "all" || message.status === statusFilter
     );
-  });
+  }) : [];
 
   const messageStats = {
-    sent: messages?.filter((m) => m.status === "sent").length || 0,
-    scheduled: messages?.filter((m) => m.status === "scheduled").length || 0,
-    failed: messages?.filter((m) => m.status === "failed").length || 0,
+    sent: Array.isArray(messages) ? messages.filter((m) => m.status === "sent").length : 0,
+    scheduled: Array.isArray(messages) ? messages.filter((m) => m.status === "scheduled").length : 0,
+    failed: Array.isArray(messages) ? messages.filter((m) => m.status === "failed").length : 0,
   };
 
   if (isLoading) {
