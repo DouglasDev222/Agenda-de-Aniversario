@@ -449,12 +449,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User methods
-  async createUser(data: InsertUser): Promise<User> {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    const [user] = await this.db
-      .insert(users)
-      .values({ ...data, password: hashedPassword })
-      .returning();
+  async createUser(userData: InsertUser): Promise<User> {
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+
+    const [user] = await this.db.insert(users).values({
+      ...userData,
+      password: hashedPassword
+    }).returning();
+
     return user;
   }
 
@@ -471,17 +474,29 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db
       .select()
       .from(users)
-      .where(and(eq(users.id, id), eq(users.isActive, true)))
+      .where(eq(users.id, id))
       .limit(1);
+
     return user || null;
   }
 
   async validateUserPassword(username: string, password: string): Promise<User | null> {
-    const user = await this.getUserByUsername(username);
-    if (!user) return null;
+    const [user] = await this.db.select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    if (!user) {
+      console.log('🔍 Usuário não encontrado:', username);
+      return null;
+    }
 
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return null;
+    console.log('🔐 Senha válida:', isValid);
+
+    if (!isValid) {
+      return null;
+    }
 
     // Update last login
     await this.db
@@ -558,11 +573,17 @@ async function initializeStorage(): Promise<IStorage> {
         setTimeout(() => reject(new Error('Connection timeout')), 10000);
       });
 
-      const connectionPromise = dbStorage.getSettings(); // Using getSettings as a simple connection test
-      await Promise.race([connectionPromise, timeoutPromise]);
+      // Use a method that interacts with the database to test the connection
+      // getSettings is a good candidate as it's likely to be simple and fast.
+      const connectionTestPromise = dbStorage.getSettings();
+      await Promise.race([connectionTestPromise, timeoutPromise]);
 
       console.log('✅ Conectado ao Supabase com sucesso!');
-      return dbStorage;
+
+      // Create default admin user after successful connection
+      await dbStorage.createDefaultUser();
+
+      return dbStorage; // Connection successful, exit the loop
     } catch (error: any) {
       lastError = error;
       console.error(`❌ Tentativa ${attempt} falhou:`, error.message);

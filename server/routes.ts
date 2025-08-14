@@ -24,18 +24,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log('🔐 Tentativa de login:', req.body);
+      
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
+        console.log('❌ Dados inválidos:', result.error);
         return res.status(400).json({ error: "Dados inválidos", details: result.error });
       }
 
       const { username, password } = result.data;
+      console.log('🔍 Validando usuário:', username);
+      
       const user = await storage.validateUserPassword(username, password);
       
       if (!user) {
+        console.log('❌ Credenciais inválidas para usuário:', username);
         return res.status(401).json({ error: "Credenciais inválidas" });
       }
 
+      console.log('✅ Login bem-sucedido para usuário:', username);
       const token = generateToken(user.id);
       const { password: _, ...userWithoutPassword } = user;
       
@@ -44,6 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: userWithoutPassword 
       });
     } catch (error) {
+      console.error('💥 Erro no login:', error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
