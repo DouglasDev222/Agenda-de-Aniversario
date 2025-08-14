@@ -237,18 +237,15 @@ export class SchedulerService {
     // Calcular idade considerando fuso horário brasileiro
     const now = new Date();
     const brazilTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    let age = brazilTime.getFullYear() - birthDate.getFullYear();
     
-    // Ajustar idade se ainda não passou o aniversário este ano
-    const monthDiff = brazilTime.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && brazilTime.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    // Para cálculo da idade no aniversário (não idade atual)
+    // Sempre usar o ano atual para calcular quantos anos a pessoa VAI COMPLETAR
+    const ageOnBirthday = brazilTime.getFullYear() - birthDate.getFullYear();
 
     return template
       .replace(/\[NOME\]/g, employee.name)
       .replace(/\[CARGO\]/g, employee.position)
-      .replace(/\[IDADE\]/g, age.toString())
+      .replace(/\[IDADE\]/g, ageOnBirthday.toString())
       .replace(/\[DATA_NASCIMENTO\]/g, birthDate.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }));
   }
 

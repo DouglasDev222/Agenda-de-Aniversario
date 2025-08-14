@@ -198,33 +198,59 @@ export class WhatsAppService {
     }
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ connected: boolean; status: string; simulateMode: boolean; realConnection: boolean }> {
     // Se estiver usando Business API, verificar se está configurada
     if (this.businessAPI && this.businessAPI.isConfigured()) {
       console.log('🔍 Testando conexão WhatsApp Business API');
-      return this.businessAPI.isConfigured();
+      const isConfigured = this.businessAPI.isConfigured();
+      return {
+        connected: isConfigured,
+        status: isConfigured ? 'connected' : 'disconnected',
+        simulateMode: false,
+        realConnection: isConfigured
+      };
     }
 
-    // Se estiver em modo simulação, retornar false para indicar que não há conexão real
+    // Se estiver em modo simulação, retornar true pois está "funcionando"
     if (this.simulateMode) {
-      console.log('🔍 Testando conexão WhatsApp (modo simulação - sem conexão real)');
-      return false;
+      console.log('🔍 Testando conexão WhatsApp (modo simulação - funcionando)');
+      return {
+        connected: true,
+        status: 'connected',
+        simulateMode: true,
+        realConnection: false
+      };
     }
 
     if (!this.client) {
       console.log('❌ Cliente WhatsApp não inicializado');
-      return false;
+      return {
+        connected: false,
+        status: 'disconnected',
+        simulateMode: false,
+        realConnection: false
+      };
     }
 
     try {
       const state = await this.client.getState();
       console.log('📊 Estado do WhatsApp:', state);
       this.isConnected = state === 'CONNECTED';
-      return this.isConnected;
+      return {
+        connected: this.isConnected,
+        status: this.isConnected ? 'connected' : 'disconnected',
+        simulateMode: false,
+        realConnection: this.isConnected
+      };
     } catch (error) {
       console.error('❌ Erro ao testar conexão:', error);
       this.isConnected = false;
-      return false;
+      return {
+        connected: false,
+        status: 'disconnected',
+        simulateMode: false,
+        realConnection: false
+      };
     }
   }
 

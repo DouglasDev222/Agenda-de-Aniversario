@@ -225,7 +225,7 @@ export default function Messages() {
             {testMessageMutation.isPending ? (
               <i className="fas fa-spinner fa-spin mr-2"></i>
             ) : (
-              <i className="fas fa-whatsapp mr-2"></i>
+              <i className="fas fa-message mr-2"></i>
             )}
             Enviar Teste
           </Button>

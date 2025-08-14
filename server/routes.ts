@@ -222,8 +222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/whatsapp/test-connection", async (_req, res) => {
     try {
-      const isConnected = await whatsappService.testConnection();
-      res.json({ connected: isConnected });
+      const connectionResult = await whatsappService.testConnection();
+      res.json(connectionResult);
     } catch (error) {
       res.status(500).json({ error: "Failed to test WhatsApp connection" });
     }
@@ -334,34 +334,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employees = await storage.getEmployees();
       const messages = await storage.getMessages();
       
-      const today = new Date();
-      const thisMonth = today.getMonth();
+      // Usar fuso horário brasileiro para todos os cálculos
+      const now = new Date();
+      const todayBrazil = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      const thisMonth = todayBrazil.getMonth();
       
       const totalEmployees = employees.length;
       
       const thisMonthBirthdays = employees.filter(emp => {
-        const birthDate = new Date(emp.birthDate);
+        const birthDate = new Date(emp.birthDate + 'T00:00:00');
         return birthDate.getMonth() === thisMonth;
       }).length;
       
       const todayBirthdays = employees.filter(emp => {
-        const birthDate = new Date(emp.birthDate);
-        return birthDate.getMonth() === today.getMonth() && 
-               birthDate.getDate() === today.getDate();
+        const birthDate = new Date(emp.birthDate + 'T00:00:00');
+        return birthDate.getMonth() === todayBrazil.getMonth() && 
+               birthDate.getDate() === todayBrazil.getDate();
       }).length;
       
       const messagesSent = messages.filter(msg => msg.status === 'sent').length;
       
       const upcomingBirthdays = employees
         .map(emp => {
-          const birthDate = new Date(emp.birthDate);
-          const thisYearBirthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+          // Usar fuso horário brasileiro para data atual
+          const now = new Date();
+          const todayBrazil = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
           
-          if (thisYearBirthday < today) {
-            thisYearBirthday.setFullYear(today.getFullYear() + 1);
+          const birthDate = new Date(emp.birthDate + 'T00:00:00');
+          const thisYearBirthday = new Date(todayBrazil.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+          
+          // Se o aniversário já passou este ano, calcular para o próximo ano
+          const todayOnly = new Date(todayBrazil.getFullYear(), todayBrazil.getMonth(), todayBrazil.getDate());
+          if (thisYearBirthday < todayOnly) {
+            thisYearBirthday.setFullYear(todayBrazil.getFullYear() + 1);
           }
           
-          const daysUntil = Math.ceil((thisYearBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const daysUntil = Math.ceil((thisYearBirthday.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24));
           
           return {
             employee: emp,

@@ -11,6 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface WhatsAppStatus {
+  isConnected: boolean;
+  status: "disconnected" | "waiting_qr" | "connecting" | "connected";
+  qrCode: string | null;
+  simulateMode: boolean;
+  realConnection: boolean;
+}
+
 export default function Settings() {
   const [formData, setFormData] = useState({
     reminderTemplate: "",
@@ -28,6 +36,11 @@ export default function Settings() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ["/api/settings"],
     queryFn: api.settings.get,
+  });
+
+  const { data: whatsappStatus } = useQuery<WhatsAppStatus>({
+    queryKey: ["/api/whatsapp/status"],
+    refetchInterval: 10000, // Atualizar a cada 10 segundos
   });
 
   const saveMutation = useMutation({
@@ -51,15 +64,28 @@ export default function Settings() {
   const testConnectionMutation = useMutation({
     mutationFn: api.whatsapp.testConnection,
     onSuccess: (data: any) => {
+      console.log('Resposta do teste de conexão:', data);
       if (data.connected) {
-        toast({
-          title: "Sucesso",
-          description: "WhatsApp conectado com sucesso! Conexão real ativa.",
-        });
+        if (data.realConnection) {
+          toast({
+            title: "Sucesso",
+            description: "WhatsApp conectado com sucesso! Conexão real ativa.",
+          });
+        } else if (data.simulateMode) {
+          toast({
+            title: "Modo Simulação",
+            description: "Sistema funcionando em modo simulação. Mensagens serão exibidas no console do servidor.",
+          });
+        } else {
+          toast({
+            title: "Conectado",
+            description: "WhatsApp testado com sucesso!",
+          });
+        }
       } else {
         toast({
-          title: "Atenção",
-          description: "WhatsApp não está conectado. Sistema funcionando apenas em modo simulação.",
+          title: "Desconectado",
+          description: "WhatsApp não está conectado. Verifique a conexão.",
           variant: "destructive",
         });
       }
@@ -72,6 +98,36 @@ export default function Settings() {
       });
     },
   });
+
+  const getWhatsAppStatusInfo = () => {
+    if (!whatsappStatus) {
+      return {
+        text: "Carregando...",
+        color: "bg-gray-500",
+        description: "Verificando status da conexão"
+      };
+    }
+
+    if (whatsappStatus.realConnection) {
+      return {
+        text: "Conectado",
+        color: "bg-green-500",
+        description: "WhatsApp conectado via API ou Web"
+      };
+    } else if (whatsappStatus.simulateMode) {
+      return {
+        text: "Modo Simulação",
+        color: "bg-yellow-500",
+        description: "Sistema funcionando em modo de teste"
+      };
+    } else {
+      return {
+        text: "Desconectado",
+        color: "bg-red-500",
+        description: "WhatsApp não está conectado"
+      };
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -152,7 +208,7 @@ export default function Settings() {
                 placeholder="Digite a mensagem de lembrete..."
               />
             </div>
-            
+
             <div>
               <Label htmlFor="birthdayTemplate">
                 Mensagem de Aniversário (no dia)
@@ -167,7 +223,7 @@ export default function Settings() {
                 placeholder="Digite a mensagem de aniversário..."
               />
             </div>
-            
+
             <div className="text-xs text-gray-500">
               <strong>Variáveis disponíveis:</strong> [NOME], [CARGO], [IDADE], [DATA_NASCIMENTO]
             </div>
@@ -204,7 +260,7 @@ export default function Settings() {
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Switch
                 id="weekendsEnabled"
@@ -227,16 +283,22 @@ export default function Settings() {
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <h4 className="font-medium text-gray-900">Status da Conexão</h4>
-                <p className="text-sm text-gray-500">WhatsApp Web / Business API</p>
+                <p className="text-sm text-gray-500">{getWhatsAppStatusInfo().description}</p>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full mr-1"></div>
-                  Modo Simulação
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  whatsappStatus?.realConnection 
+                    ? 'bg-green-100 text-green-800' 
+                    : whatsappStatus?.simulateMode 
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  <div className={`w-2 h-2 ${getWhatsAppStatusInfo().color} rounded-full mr-1`}></div>
+                  {getWhatsAppStatusInfo().text}
                 </span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="retryAttempts">Tentativas de Reenvio</Label>
@@ -254,7 +316,7 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="retryInterval">Intervalo entre Tentativas (minutos)</Label>
                 <Input
@@ -291,7 +353,7 @@ export default function Settings() {
               </>
             )}
           </Button>
-          
+
           <Button 
             type="button"
             variant="outline"

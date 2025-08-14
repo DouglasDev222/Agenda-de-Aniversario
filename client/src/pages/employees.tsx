@@ -60,27 +60,21 @@ export default function Employees() {
     const birth = new Date(birthDate + 'T00:00:00');
     const today = new Date();
 
-    let age = today.getFullYear() - birth.getFullYear();
+    let currentAge = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     const dayDiff = today.getDate() - birth.getDate();
 
-    let status = '';
-    
-    // Check if birthday hasn't happened this year yet
+    // Se o aniversário ainda não aconteceu este ano, diminui 1 da idade
     if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      age--;
-      status = 'completará';
-    } 
-    // Check if birthday is today
-    else if (monthDiff === 0 && dayDiff === 0) {
-      status = 'completando';
-    } 
-    // Birthday already happened this year
-    else {
-      status = 'completou';
+      currentAge--;
     }
 
-    return { age, status };
+    const nextAge = currentAge + 1;
+    
+    // Verifica se é aniversário hoje
+    const isBirthdayToday = monthDiff === 0 && dayDiff === 0;
+
+    return { currentAge, nextAge, isBirthdayToday };
   };
 
   const getNextBirthday = (birthDate: string) => {
@@ -323,7 +317,20 @@ export default function Employees() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {(() => {
                             const ageInfo = calculateAge(employee.birthDate);
-                            return `${ageInfo.age} anos (${ageInfo.status})`;
+                            if (ageInfo.isBirthdayToday) {
+                              return (
+                                <div>
+                                  <span className="font-semibold text-green-600">{ageInfo.currentAge} anos</span>
+                                  <span className="text-xs text-green-600 block">🎂 Aniversário hoje!</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div>
+                                <span className="font-medium">{ageInfo.currentAge} anos</span>
+                                <span className="text-xs text-gray-500 block">próx: {ageInfo.nextAge} anos</span>
+                              </div>
+                            );
                           })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -405,12 +412,25 @@ export default function Employees() {
                           </div>
                           <div>
                             <span className="text-gray-500">Idade:</span>
-                            <p className="text-gray-900 font-medium">
+                            <div className="text-gray-900 font-medium">
                               {(() => {
                                 const ageInfo = calculateAge(employee.birthDate);
-                                return `${ageInfo.age} anos (${ageInfo.status})`;
+                                if (ageInfo.isBirthdayToday) {
+                                  return (
+                                    <div>
+                                      <span className="font-semibold text-green-600">{ageInfo.currentAge} anos</span>
+                                      <span className="text-xs text-green-600 block">🎂 Aniversário hoje!</span>
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div>
+                                    <span>{ageInfo.currentAge} anos</span>
+                                    <span className="text-xs text-gray-500 block">próx: {ageInfo.nextAge} anos</span>
+                                  </div>
+                                );
                               })()}
-                            </p>
+                            </div>
                           </div>
                           <div className="col-span-2">
                             <span className="text-gray-500">Próximo aniversário:</span>

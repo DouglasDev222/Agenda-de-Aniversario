@@ -136,7 +136,7 @@ export default function Contacts() {
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                         contact.isActive ? 'bg-green-100' : 'bg-gray-100'
                       }`}>
-                        <i className={`fas fa-whatsapp text-lg ${
+                        <i className={`fas fa-message text-lg ${
                           contact.isActive ? 'text-green-600' : 'text-gray-400'
                         }`}></i>
                       </div>
@@ -211,7 +211,7 @@ export default function Contacts() {
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                       contact.isActive ? 'bg-green-100' : 'bg-gray-100'
                     }`}>
-                      <i className={`fas fa-whatsapp text-lg ${
+                      <i className={`fas fa-message text-lg ${
                         contact.isActive ? 'text-green-600' : 'text-gray-400'
                       }`}></i>
                     </div>

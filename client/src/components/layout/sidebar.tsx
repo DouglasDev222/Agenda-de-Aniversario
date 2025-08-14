@@ -19,7 +19,7 @@ const navigation = [
   {
     name: "Mensagens",
     href: "/messages", 
-    icon: "fas fa-whatsapp",
+    icon: "fas fa-message",
   },
   {
     name: "WhatsApp",

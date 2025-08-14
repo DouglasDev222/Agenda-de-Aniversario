@@ -131,7 +131,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-whatsapp text-purple-600 text-sm lg:text-base"></i>
+                <i className="fas fa-message text-purple-600 text-sm lg:text-base"></i>
               </div>
             </div>
           </CardContent>
@@ -210,7 +210,7 @@ export default function Dashboard() {
                       className="flex items-start space-x-3 py-2 lg:py-3 border-b border-gray-100 last:border-b-0"
                     >
                       <div className={`w-8 h-8 ${isSuccess ? 'bg-green-100' : 'bg-yellow-100'} rounded-full flex items-center justify-center flex-shrink-0`}>
-                        <i className={`fas ${isSuccess ? 'fa-whatsapp text-green-600' : 'fa-clock text-yellow-600'} text-xs lg:text-sm`}></i>
+                        <i className={`fas ${isSuccess ? 'fa-message text-green-600' : 'fa-clock text-yellow-600'} text-xs lg:text-sm`}></i>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs lg:text-sm text-gray-900 truncate">
@@ -230,7 +230,7 @@ export default function Dashboard() {
                 })
               ) : (
                 <div className="text-center py-6 lg:py-8 text-gray-500">
-                  <i className="fas fa-message text-3xl lg:text-4xl mb-2 text-gray-300"></i>
+                  <i className="fas fa-comments text-3xl lg:text-4xl mb-2 text-gray-300"></i>
                   <p className="text-sm lg:text-base">Nenhuma mensagem recente</p>
                 </div>
               )}
