@@ -1,9 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -25,21 +26,57 @@ export default function ImportEmployeesModal({ isOpen, onClose }: ImportEmployee
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<EmployeeData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importedCount, setImportedCount] = useState(0);
+  const [totalToImport, setTotalToImport] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Prevenir fechamento da página durante importação
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isImporting) {
+        e.preventDefault();
+        e.returnValue = 'A importação está em andamento. Tem certeza que deseja sair?';
+        return 'A importação está em andamento. Tem certeza que deseja sair?';
+      }
+    };
+
+    if (isImporting) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isImporting]);
+
   const mutation = useMutation({
     mutationFn: async (employees: any[]) => {
+      setIsImporting(true);
+      setTotalToImport(employees.length);
+      setImportedCount(0);
+      setImportProgress(0);
+
       const results = [];
-      for (const employee of employees) {
+      for (let i = 0; i < employees.length; i++) {
+        const employee = employees[i];
         try {
           const result = await api.employees.create(employee);
           results.push({ success: true, data: result, employee });
         } catch (error) {
           results.push({ success: false, error, employee });
         }
+        
+        // Atualizar progresso
+        const completed = i + 1;
+        setImportedCount(completed);
+        setImportProgress(Math.round((completed / employees.length) * 100));
       }
+      
+      setIsImporting(false);
       return results;
     },
     onSuccess: (results) => {
@@ -72,8 +109,15 @@ export default function ImportEmployeesModal({ isOpen, onClose }: ImportEmployee
       onClose();
       setFile(null);
       setPreviewData([]);
+      setImportProgress(0);
+      setImportedCount(0);
+      setTotalToImport(0);
     },
     onError: () => {
+      setIsImporting(false);
+      setImportProgress(0);
+      setImportedCount(0);
+      setTotalToImport(0);
       toast({
         title: "Erro",
         description: "Falha na importação. Tente novamente.",
@@ -215,9 +259,20 @@ export default function ImportEmployeesModal({ isOpen, onClose }: ImportEmployee
   };
 
   const handleClose = () => {
+    if (isImporting) {
+      const confirmClose = window.confirm(
+        'A importação está em andamento. Tem certeza que deseja cancelar? Os colaboradores já importados não serão removidos.'
+      );
+      if (!confirmClose) return;
+    }
+    
     onClose();
     setFile(null);
     setPreviewData([]);
+    setImportProgress(0);
+    setImportedCount(0);
+    setTotalToImport(0);
+    setIsImporting(false);
   };
 
   return (
@@ -263,8 +318,31 @@ export default function ImportEmployeesModal({ isOpen, onClose }: ImportEmployee
             </div>
           )}
 
+          {/* Import Progress */}
+          {isImporting && (
+            <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <i className="fas fa-info-circle text-blue-600"></i>
+                <span className="text-sm font-medium text-blue-800">
+                  ⚠️ Importação em andamento - Não feche esta página!
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progresso da importação:</span>
+                  <span className="font-medium">{importedCount} de {totalToImport} colaboradores</span>
+                </div>
+                <Progress value={importProgress} className="w-full" />
+                <div className="text-center text-sm text-gray-600">
+                  {importProgress}% concluído
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Preview */}
-          {previewData.length > 0 && (
+          {previewData.length > 0 && !isImporting && (
             <div className="space-y-2">
               <Label>3. Prévia dos dados ({previewData.length} colaboradores encontrados)</Label>
               <div className="border rounded-lg max-h-64 overflow-y-auto">
@@ -304,33 +382,35 @@ export default function ImportEmployeesModal({ isOpen, onClose }: ImportEmployee
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            {previewData.length > 0 && (
+            {previewData.length > 0 && !isImporting && (
               <Button 
                 onClick={handleImport} 
                 className="flex-1 h-11"
                 disabled={mutation.isPending}
               >
-                {mutation.isPending ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Importando...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-upload mr-2"></i>
-                    Importar {previewData.length} Colaboradores
-                  </>
-                )}
+                <i className="fas fa-upload mr-2"></i>
+                Importar {previewData.length} Colaboradores
               </Button>
             )}
+            
+            {isImporting && (
+              <Button 
+                disabled 
+                className="flex-1 h-11"
+              >
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Importando {importedCount} de {totalToImport}...
+              </Button>
+            )}
+            
             <Button 
               type="button" 
-              variant="outline" 
+              variant={isImporting ? "destructive" : "outline"}
               className="flex-1 h-11"
               onClick={handleClose}
             >
-              <i className="fas fa-times mr-2"></i>
-              Cancelar
+              <i className={`fas ${isImporting ? 'fa-stop' : 'fa-times'} mr-2`}></i>
+              {isImporting ? 'Cancelar Importação' : 'Cancelar'}
             </Button>
           </div>
         </div>
