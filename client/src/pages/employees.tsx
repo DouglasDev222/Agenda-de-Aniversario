@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmployeeModal from "@/components/modals/employee-modal";
@@ -20,14 +21,30 @@ export default function Employees() {
   const [searchQuery, setSearchQuery] = useState("");
   const [positionFilter, setPositionFilter] = useState("");
   const [monthFilter, setMonthFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: employees, isLoading } = useQuery({
-    queryKey: ["/api/employees"],
-    queryFn: api.employees.getAll,
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, positionFilter, monthFilter]);
+
+  const { data: employeesData, isLoading } = useQuery({
+    queryKey: ["/api/employees", currentPage, pageSize, searchQuery, positionFilter, monthFilter],
+    queryFn: () => api.employees.getAll({
+      page: currentPage,
+      limit: pageSize,
+      search: searchQuery,
+      position: positionFilter,
+      month: monthFilter
+    }),
   });
+
+  const employees = employeesData?.employees || [];
+  const pagination = employeesData?.pagination;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.employees.delete(id),
@@ -120,29 +137,8 @@ export default function Employees() {
     return 'text-blue-600';
   };
 
-  const filteredEmployees = employees && Array.isArray(employees) ? employees.filter((employee) => {
-    const matchesSearch = employee.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPosition = !positionFilter || positionFilter === "all" || employee.position.toLowerCase().includes(positionFilter.toLowerCase());
-
-    let matchesMonth = true;
-    if (monthFilter && monthFilter !== "all") {
-      const birthMonth = new Date(employee.birthDate + 'T00:00:00').getMonth() + 1;
-      matchesMonth = birthMonth.toString() === monthFilter;
-    }
-
-    return matchesSearch && matchesPosition && matchesMonth;
-  }).sort((a, b) => {
-    // Sort by next birthday - today first, then upcoming dates
-    const nextBirthdayA = getNextBirthday(a.birthDate);
-    const nextBirthdayB = getNextBirthday(b.birthDate);
-    
-    // If days are equal, sort alphabetically by name
-    if (nextBirthdayA.days === nextBirthdayB.days) {
-      return a.name.localeCompare(b.name);
-    }
-    
-    return nextBirthdayA.days - nextBirthdayB.days;
-  }) : [];
+  // Employees are now filtered and sorted on the server
+  const filteredEmployees = employees;
 
   const handleEdit = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -467,6 +463,134 @@ export default function Employees() {
             </div>
           )}
         </CardContent>
+        
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t">
+            <div className="text-sm text-gray-500">
+              Mostrando {((pagination.page - 1) * pagination.limit) + 1} até{" "}
+              {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
+              {pagination.total} colaboradores
+            </div>
+            
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pagination.hasPrev) {
+                        setCurrentPage(currentPage - 1);
+                      }
+                    }}
+                    className={!pagination.hasPrev ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {/* Page numbers */}
+                {(() => {
+                  const pages = [];
+                  const showPages = 5; // Show 5 page numbers
+                  const halfShow = Math.floor(showPages / 2);
+                  
+                  let startPage = Math.max(1, currentPage - halfShow);
+                  let endPage = Math.min(pagination.totalPages, startPage + showPages - 1);
+                  
+                  // Adjust start if we're near the end
+                  if (endPage - startPage + 1 < showPages) {
+                    startPage = Math.max(1, endPage - showPages + 1);
+                  }
+                  
+                  // Add first page and ellipsis if needed
+                  if (startPage > 1) {
+                    pages.push(
+                      <PaginationItem key={1}>
+                        <PaginationLink 
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(1);
+                          }}
+                          isActive={currentPage === 1}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                    
+                    if (startPage > 2) {
+                      pages.push(
+                        <PaginationItem key="start-ellipsis">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                  }
+                  
+                  // Add visible page numbers
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <PaginationItem key={i}>
+                        <PaginationLink 
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(i);
+                          }}
+                          isActive={currentPage === i}
+                        >
+                          {i}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  // Add last page and ellipsis if needed
+                  if (endPage < pagination.totalPages) {
+                    if (endPage < pagination.totalPages - 1) {
+                      pages.push(
+                        <PaginationItem key="end-ellipsis">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    pages.push(
+                      <PaginationItem key={pagination.totalPages}>
+                        <PaginationLink 
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pagination.totalPages);
+                          }}
+                          isActive={currentPage === pagination.totalPages}
+                        >
+                          {pagination.totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  
+                  return pages;
+                })()}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pagination.hasNext) {
+                        setCurrentPage(currentPage + 1);
+                      }
+                    }}
+                    className={!pagination.hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </Card>
 
       {/* Employee Modal */}

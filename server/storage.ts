@@ -103,8 +103,79 @@ export class MemStorage implements IStorage {
   }
 
   // Employee operations
-  async getEmployees(): Promise<Employee[]> {
-    return Array.from(this.employees.values());
+  async getEmployees(page: number = 1, limit: number = 50, search: string = "", position: string = "", month: string = ""): Promise<{
+    employees: Employee[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    let employees = Array.from(this.employees.values());
+    
+    // Apply filters
+    if (search) {
+      employees = employees.filter(emp => 
+        emp.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    if (position && position !== "all") {
+      employees = employees.filter(emp => 
+        emp.position.toLowerCase().includes(position.toLowerCase())
+      );
+    }
+    
+    if (month && month !== "all") {
+      employees = employees.filter(emp => {
+        const birthMonth = new Date(emp.birthDate + 'T00:00:00').getMonth() + 1;
+        return birthMonth.toString() === month;
+      });
+    }
+    
+    // Sort by next birthday
+    employees.sort((a, b) => {
+      const getNextBirthday = (birthDate: string) => {
+        const birth = new Date(birthDate + 'T00:00:00');
+        const today = new Date();
+        const thisYear = today.getFullYear();
+        let nextBirthday = new Date(thisYear, birth.getMonth(), birth.getDate());
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (nextBirthday < todayDateOnly) {
+          nextBirthday = new Date(thisYear + 1, birth.getMonth(), birth.getDate());
+        }
+        const diffTime = nextBirthday.getTime() - todayDateOnly.getTime();
+        return Math.round(diffTime / (1000 * 60 * 60 * 24));
+      };
+      
+      const daysA = getNextBirthday(a.birthDate);
+      const daysB = getNextBirthday(b.birthDate);
+      
+      if (daysA === daysB) {
+        return a.name.localeCompare(b.name);
+      }
+      return daysA - daysB;
+    });
+    
+    const total = employees.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const paginatedEmployees = employees.slice(offset, offset + limit);
+    
+    return {
+      employees: paginatedEmployees,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
   }
 
   async getEmployee(id: string): Promise<Employee | undefined> {

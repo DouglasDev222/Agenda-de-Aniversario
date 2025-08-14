@@ -44,18 +44,30 @@ function getToken(): string | null {
   return localStorage.getItem('auth_token');
 }
 
+// Helper function to get auth headers
+function getAuthHeaders(): HeadersInit {
+  const token = getToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 
 export const api = {
   auth: {
     login: async (credentials: { username: string; password: string }) =>
-      request<{ token: string; user: any }>("/auth/login", {
+      request<any>("/auth/login", {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
 
     me: async () => request<any>("/auth/me"),
 
-    logout: async () => request<{ message: string }>("/auth/logout", {
+    logout: async () => request<any>("/auth/logout", {
       method: "POST",
     }),
   },
@@ -77,7 +89,36 @@ export const api = {
 
   // Employee API
   employees: {
-    getAll: () => request<Employee[]>("/employees"),
+    getAll: async (params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      position?: string;
+      month?: string;
+    }): Promise<{
+      employees: Employee[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
+    }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.append('page', params.page.toString());
+      if (params?.limit) searchParams.append('limit', params.limit.toString());
+      if (params?.search) searchParams.append('search', params.search);
+      if (params?.position) searchParams.append('position', params.position);
+      if (params?.month) searchParams.append('month', params.month);
+
+      const response = await fetch(`/api/employees?${searchParams}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) throw new Error("Failed to fetch employees");
+      return response.json();
+    },
     create: (data: any) => request<any>("/employees", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) => request<any>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/employees/${id}`, { method: "DELETE" }),
@@ -124,4 +165,3 @@ export const api = {
     get: () => request<any>("/stats"),
   },
 };
-
