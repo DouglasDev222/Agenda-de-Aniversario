@@ -168,7 +168,7 @@ export default function Messages() {
     }
   };
 
-  const filteredMessages = messages?.filter((message) => {
+  const filteredMessages = (messages || []).filter((message) => {
     return (
       !statusFilter || statusFilter === "all" || message.status === statusFilter
     );
