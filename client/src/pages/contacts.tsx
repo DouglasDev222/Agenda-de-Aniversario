@@ -17,10 +17,13 @@ export default function Contacts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: contacts, isLoading } = useQuery({
+  const { data: contactsData, isLoading } = useQuery({
     queryKey: ["/api/contacts"],
     queryFn: api.contacts.getAll,
   });
+
+  // Ensure contacts is always an array
+  const contacts = Array.isArray(contactsData) ? contactsData : [];
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.contacts.delete(id),

@@ -40,6 +40,10 @@ async function request<T>(
   return await response.json() as T;
 }
 
+function getToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
+
 
 export const api = {
   auth: {
@@ -81,7 +85,17 @@ export const api = {
 
   // Contact API
   contacts: {
-    getAll: () => fetch("/api/contacts").then(res => res.json()) as Promise<Contact[]>,
+    getAll: async (): Promise<Contact[]> => {
+      const response = await fetch("/api/contacts", {
+        headers: {
+          "Authorization": `Bearer ${getToken()}`
+        }
+      });
+      if (!response.ok) throw new Error("Failed to fetch contacts");
+      const data = await response.json();
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
+    },
     create: (data: any) => apiRequest("POST", "/api/contacts", data),
     update: (id: string, data: any) => apiRequest("PUT", `/api/contacts/${id}`, data),
     delete: (id: string) => apiRequest("DELETE", `/api/contacts/${id}`),
@@ -101,7 +115,7 @@ export const api = {
   // WhatsApp API
   whatsapp: {
     testConnection: () => apiRequest("POST", "/api/whatsapp/test-connection"),
-    sendTest: (data: { phoneNumber: string; message: string }) => 
+    sendTest: (data: { phoneNumber: string; message: string }) =>
       apiRequest("POST", "/api/whatsapp/send-test", data),
   },
 
