@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,17 +177,8 @@ export default function Employees() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-96" />
-      </div>
-    );
-  }
-
-  // Componente separado para os filtros (estático)
-  const SearchAndFilters = useMemo(() => (
+  // Componente dos filtros (estático)
+  const SearchAndFilters = (
     <Card>
       <CardContent className="p-4 lg:p-6">
         <div className="space-y-4">
@@ -275,7 +266,16 @@ export default function Employees() {
         </div>
       </CardContent>
     </Card>
-  ), [searchInput, positionFilter, monthFilter, handleAdd]);
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-24" />
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 lg:space-y-6">
