@@ -215,41 +215,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const status = req.query.status as string;
-      const offset = (page - 1) * limit;
 
-      // Build where conditions
-      const whereConditions = [];
+      // Get all messages using storage method
+      const allMessages = await storage.getMessages();
+      
+      // Filter by status if provided
+      let filteredMessages = allMessages;
       if (status && status !== 'all') {
-        whereConditions.push(eq(messages.status, status));
+        filteredMessages = allMessages.filter(msg => msg.status === status);
       }
 
-      // Get total count
-      let totalQuery = storage.db.select({ count: sql<number>`count(*)` }).from(messages);
-      if (whereConditions.length > 0) {
-        totalQuery = totalQuery.where(and(...whereConditions));
-      }
-      const [{ count: total }] = await totalQuery;
+      // Sort by creation date (newest first)
+      filteredMessages.sort((a, b) => {
+        const dateA = a.sentAt || a.scheduledFor || new Date(0);
+        const dateB = b.sentAt || b.scheduledFor || new Date(0);
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
 
-      // Get paginated messages
-      let messagesQuery = storage.db.select().from(messages).orderBy(desc(messages.createdAt));
-      if (whereConditions.length > 0) {
-        messagesQuery = messagesQuery.where(and(...whereConditions));
-      }
-      const messagesData = await messagesQuery.limit(limit).offset(offset);
-
+      const total = filteredMessages.length;
       const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+      const paginatedMessages = filteredMessages.slice(offset, offset + limit);
+
       const hasNext = page < totalPages;
       const hasPrev = page > 1;
 
       res.json({
-        messages: messagesData,
+        messages: paginatedMessages,
         pagination: {
           page,
           limit,
           total,
           totalPages,
           hasNext,
-          hasPrev: page > 1,
+          hasPrev,
         }
       });
     } catch (error) {
