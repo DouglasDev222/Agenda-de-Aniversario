@@ -51,6 +51,8 @@ export default function Employees() {
       position: positionFilter,
       month: monthFilter
     }),
+    // Manter dados anteriores durante o carregamento para evitar flickering
+    keepPreviousData: true,
   });
 
   const employees = employeesData?.employees || [];
@@ -184,98 +186,103 @@ export default function Employees() {
     );
   }
 
-  return (
-    <div className="space-y-4 lg:space-y-6">
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4 lg:p-6">
-          <div className="space-y-4">
-            {/* Search bar */}
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar colaborador
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fas fa-search text-gray-400"></i>
-                </div>
-                <Input
-                  id="search"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Digite o nome do colaborador..."
-                  className="pl-10"
-                />
+  // Componente separado para os filtros (estático)
+  const SearchAndFilters = useMemo(() => (
+    <Card>
+      <CardContent className="p-4 lg:p-6">
+        <div className="space-y-4">
+          {/* Search bar */}
+          <div>
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+              Buscar colaborador
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i className="fas fa-search text-gray-400"></i>
               </div>
+              <Input
+                id="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Digite o nome do colaborador..."
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Filters row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filtrar por cargo
+              </label>
+              <Select value={positionFilter} onValueChange={setPositionFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os cargos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cargos</SelectItem>
+                  <SelectItem value="gerente">Gerente</SelectItem>
+                  <SelectItem value="analista">Analista</SelectItem>
+                  <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
+                  <SelectItem value="assistente">Assistente</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Filters row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filtrar por cargo
-                </label>
-                <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os cargos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os cargos</SelectItem>
-                    <SelectItem value="gerente">Gerente</SelectItem>
-                    <SelectItem value="analista">Analista</SelectItem>
-                    <SelectItem value="desenvolvedor">Desenvolvedor</SelectItem>
-                    <SelectItem value="assistente">Assistente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mês de aniversário
+              </label>
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os meses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  <SelectItem value="1">Janeiro</SelectItem>
+                  <SelectItem value="2">Fevereiro</SelectItem>
+                  <SelectItem value="3">Março</SelectItem>
+                  <SelectItem value="4">Abril</SelectItem>
+                  <SelectItem value="5">Maio</SelectItem>
+                  <SelectItem value="6">Junho</SelectItem>
+                  <SelectItem value="7">Julho</SelectItem>
+                  <SelectItem value="8">Agosto</SelectItem>
+                  <SelectItem value="9">Setembro</SelectItem>
+                  <SelectItem value="10">Outubro</SelectItem>
+                  <SelectItem value="11">Novembro</SelectItem>
+                  <SelectItem value="12">Dezembro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mês de aniversário
-                </label>
-                <Select value={monthFilter} onValueChange={setMonthFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os meses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os meses</SelectItem>
-                    <SelectItem value="1">Janeiro</SelectItem>
-                    <SelectItem value="2">Fevereiro</SelectItem>
-                    <SelectItem value="3">Março</SelectItem>
-                    <SelectItem value="4">Abril</SelectItem>
-                    <SelectItem value="5">Maio</SelectItem>
-                    <SelectItem value="6">Junho</SelectItem>
-                    <SelectItem value="7">Julho</SelectItem>
-                    <SelectItem value="8">Agosto</SelectItem>
-                    <SelectItem value="9">Setembro</SelectItem>
-                    <SelectItem value="10">Outubro</SelectItem>
-                    <SelectItem value="11">Novembro</SelectItem>
-                    <SelectItem value="12">Dezembro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="sm:col-span-2 lg:col-span-1 space-y-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  &nbsp;
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Button onClick={handleAdd} className="w-full">
-                    <i className="fas fa-plus mr-2"></i>
-                    Adicionar
-                  </Button>
-                  <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="w-full">
-                    <i className="fas fa-file-import mr-2"></i>
-                    Importar
-                  </Button>
-                </div>
+            <div className="sm:col-span-2 lg:col-span-1 space-y-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                &nbsp;
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button onClick={handleAdd} className="w-full">
+                  <i className="fas fa-plus mr-2"></i>
+                  Adicionar
+                </Button>
+                <Button onClick={() => setIsImportModalOpen(true)} variant="outline" className="w-full">
+                  <i className="fas fa-file-import mr-2"></i>
+                  Importar
+                </Button>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
+  ), [searchInput, positionFilter, monthFilter, handleAdd]);
 
-      {/* Employees List */}
+  return (
+    <div className="space-y-4 lg:space-y-6">
+      {/* Search and Filters - Componente estático */}
+      {SearchAndFilters}
+
+      {/* Employees List - Componente que atualiza */}
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg lg:text-xl">Lista de Colaboradores</CardTitle>
