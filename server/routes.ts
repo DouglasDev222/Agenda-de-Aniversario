@@ -93,6 +93,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+      console.log('📝 Atualizando usuário:', req.params.id, 'Dados:', req.body);
+
+      const result = insertUserSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        console.log('❌ Dados inválidos:', result.error);
+        return res.status(400).json({ error: "Dados inválidos", details: result.error });
+      }
+
+      const user = await storage.updateUser(req.params.id, result.data);
+      if (!user) {
+        console.log('❌ Usuário não encontrado:', req.params.id);
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      console.log('✅ Usuário atualizado com sucesso:', user.username);
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('💥 Erro ao atualizar usuário:', error);
+      res.status(500).json({ error: "Falha ao atualizar usuário" });
+    }
+  });
+
   // Employee routes
   app.get("/api/employees", authenticateToken, requireManagement, async (req, res) => {
     try {
@@ -218,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all messages using storage method
       const allMessages = await storage.getMessages();
-      
+
       // Filter by status if provided
       let filteredMessages = allMessages;
       if (status && status !== 'all') {

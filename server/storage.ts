@@ -367,16 +367,18 @@ export class MemStorage implements IStorage {
     const existingUser = this.users.get(id);
     if (!existingUser || !existingUser.isActive) return null;
 
-    let hashedPassword = existingUser.password;
-    if (data.password) {
-      hashedPassword = await bcrypt.hash(data.password, 10);
+    const updateData: any = { ...data };
+    
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+    if (updateData.username) {
+      updateData.username = updateData.username.toLowerCase().trim();
     }
 
     const updatedUser = {
       ...existingUser,
-      ...data,
-      username: data.username ? data.username.toLowerCase().trim() : existingUser.username,
-      password: hashedPassword,
+      ...updateData,
       lastLogin: existingUser.lastLogin // Keep the existing lastLogin if not updated
     };
     this.users.set(id, updatedUser);
@@ -694,16 +696,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | null> {
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10);
+    const updateData: any = { ...data };
+    
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
     }
-    if (data.username) {
-      data.username = data.username.toLowerCase().trim();
+    if (updateData.username) {
+      updateData.username = updateData.username.toLowerCase().trim();
     }
 
     const [user] = await this.db
       .update(users)
-      .set(data)
+      .set(updateData)
       .where(eq(users.id, id))
       .returning();
     return user || null;
