@@ -97,10 +97,6 @@ export default function Login() {
           </CardContent>
         </Card>
 
-        <div className="text-center text-xs text-gray-500">
-          <p>Usuário padrão: admin</p>
-          <p>Senha padrão: admin123</p>
-        </div>
       </div>
     </div>
   );
