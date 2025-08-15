@@ -5,12 +5,14 @@ import { whatsappService } from "./services/whatsapp";
 import { schedulerService } from "./services/scheduler";
 import { insertEmployeeSchema, insertContactSchema, insertSettingsSchema, insertUserSchema, loginSchema } from "@shared/schema";
 import { authenticateToken, requireAdmin, requireManagement, generateToken } from "./middleware/auth";
+import { eq, like, or, and, count, desc, asc, sql } from "drizzle-orm";
+import { messagesTable } from "@shared/schema"; // Assuming messagesTable is exported from @shared/schema
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize storage first
   await storagePromise;
   console.log('Storage initialized successfully');
-  
+
   // Initialize services
   try {
     console.log('Initializing WhatsApp service...');
@@ -25,7 +27,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       console.log('🔐 Tentativa de login:', req.body);
-      
+
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
         console.log('❌ Dados inválidos:', result.error);
@@ -34,9 +36,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { username, password } = result.data;
       console.log('🔍 Validando usuário:', username);
-      
+
       const user = await storage.validateUserPassword(username, password);
-      
+
       if (!user) {
         console.log('❌ Credenciais inválidas para usuário:', username);
         return res.status(401).json({ error: "Credenciais inválidas" });
@@ -45,10 +47,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('✅ Login bem-sucedido para usuário:', username);
       const token = generateToken(user.id);
       const { password: _, ...userWithoutPassword } = user;
-      
-      res.json({ 
-        token, 
-        user: userWithoutPassword 
+
+      res.json({
+        token,
+        user: userWithoutPassword
       });
     } catch (error) {
       console.error('💥 Erro no login:', error);
@@ -82,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Dados inválidos", details: result.error });
       }
-      
+
       const user = await storage.createUser(result.data);
       const { password: _, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
@@ -99,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string || "";
       const position = req.query.position as string || "";
       const month = req.query.month as string || "";
-      
+
       const result = await storage.getEmployeesPaginated(page, limit, search, position, month);
       res.json(result);
     } catch (error) {
@@ -113,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Invalid employee data", details: result.error });
       }
-      
+
       const employee = await storage.createEmployee(result.data);
       res.status(201).json(employee);
     } catch (error) {
@@ -127,12 +129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Invalid employee data", details: result.error });
       }
-      
+
       const employee = await storage.updateEmployee(req.params.id, result.data);
       if (!employee) {
         return res.status(404).json({ error: "Employee not found" });
       }
-      
+
       res.json(employee);
     } catch (error) {
       res.status(500).json({ error: "Failed to update employee" });
@@ -145,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ error: "Employee not found" });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete employee" });
@@ -168,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Invalid contact data", details: result.error });
       }
-      
+
       const contact = await storage.createContact(result.data);
       res.status(201).json(contact);
     } catch (error) {
@@ -182,12 +184,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Invalid contact data", details: result.error });
       }
-      
+
       const contact = await storage.updateContact(req.params.id, result.data);
       if (!contact) {
         return res.status(404).json({ error: "Contact not found" });
       }
-      
+
       res.json(contact);
     } catch (error) {
       res.status(500).json({ error: "Failed to update contact" });
@@ -200,19 +202,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ error: "Contact not found" });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete contact" });
     }
   });
 
-  // Message routes
-  app.get("/api/messages", authenticateToken, requireManagement, async (_req, res) => {
+  // Messages routes
+  app.get("/api/messages", authenticateToken, async (req, res) => {
     try {
-      const messages = await storage.getMessages();
-      res.json(messages);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const status = req.query.status as string;
+      const offset = (page - 1) * limit;
+
+      // Build where conditions
+      const whereConditions = [];
+      if (status && status !== 'all') {
+        whereConditions.push(eq(messagesTable.status, status));
+      }
+
+      // Get total count
+      let totalQuery = storage.db.select({ count: sql<number>`count(*)` }).from(messagesTable);
+      if (whereConditions.length > 0) {
+        totalQuery = totalQuery.where(and(...whereConditions));
+      }
+      const [{ count: total }] = await totalQuery;
+
+      // Get paginated messages
+      let messagesQuery = storage.db.select().from(messagesTable).orderBy(desc(messagesTable.createdAt));
+      if (whereConditions.length > 0) {
+        messagesQuery = messagesQuery.where(and(...whereConditions));
+      }
+      const messages = await messagesQuery.limit(limit).offset(offset);
+
+      const totalPages = Math.ceil(total / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      res.json({
+        messages,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext,
+          hasPrev,
+        },
+      });
     } catch (error) {
+      console.error("Error fetching messages:", error);
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   });
@@ -236,12 +277,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result.success) {
         return res.status(400).json({ error: "Invalid settings data", details: result.error });
       }
-      
+
       const settings = await storage.createOrUpdateSettings(result.data);
-      
+
       // Update scheduler with new settings
       await schedulerService.updateSchedules();
-      
+
       res.json(settings);
     } catch (error) {
       res.status(500).json({ error: "Failed to save settings" });
@@ -309,16 +350,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/whatsapp/send-test", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { phoneNumber, message } = req.body;
-      
+
       if (!phoneNumber || !message) {
         return res.status(400).json({ error: "Phone number and message are required" });
       }
-      
+
       console.log(`🧪 Teste manual: Enviando mensagem para ${phoneNumber}`);
       console.log(`📝 Conteúdo: ${message}`);
-      
+
       const success = await whatsappService.sendMessage(phoneNumber, message);
-      
+
       if (success) {
         console.log(`✅ Teste manual: Mensagem enviada com sucesso para ${phoneNumber}`);
         res.json({ success: true, message: "Test message sent successfully" });
@@ -335,16 +376,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/whatsapp/check-number", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
-      
+
       if (!phoneNumber) {
         return res.status(400).json({ error: "Phone number is required" });
       }
-      
+
       // Simular a formatação que seria feita no sendMessage
       let formattedNumber = phoneNumber.replace(/\D/g, '');
-      
+
       const originalFormatted = formattedNumber;
-      
+
       // Aplicar formatação completa
       if (formattedNumber.length === 10) {
         // Número com 10 dígitos - adicionar 9º dígito
@@ -352,14 +393,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const numero = formattedNumber.substring(2);
         formattedNumber = ddd + '9' + numero;
       }
-      
+
       if (formattedNumber.length === 11 && !formattedNumber.startsWith('55')) {
         // Adicionar código do país
         formattedNumber = '55' + formattedNumber;
       }
-      
+
       const chatId = formattedNumber + '@c.us';
-      
+
       res.json({
         original: phoneNumber,
         cleaned: originalFormatted,
@@ -381,14 +422,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const contacts = await storage.getContacts();
       const activeContacts = contacts.filter(c => c.isActive);
-      
+
       console.log(`🔍 DEBUG - Total de contatos: ${contacts.length}`);
       console.log(`🔍 DEBUG - Contatos ativos: ${activeContacts.length}`);
-      
+
       contacts.forEach(contact => {
         console.log(`📇 Contato: ${contact.name} | Telefone: ${contact.phone} | Ativo: ${contact.isActive} | Função: ${contact.role}`);
       });
-      
+
       res.json({
         totalContacts: contacts.length,
         activeContacts: activeContacts.length,
@@ -410,44 +451,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const employees = await storage.getEmployees();
       const messages = await storage.getMessages();
-      
+
       // Usar fuso horário brasileiro para todos os cálculos
       const now = new Date();
       const todayBrazil = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
       const thisMonth = todayBrazil.getMonth();
-      
+
       const totalEmployees = employees.length;
-      
+
       const thisMonthBirthdays = employees.filter(emp => {
         const birthDate = new Date(emp.birthDate + 'T00:00:00');
         return birthDate.getMonth() === thisMonth;
       }).length;
-      
+
       const todayBirthdays = employees.filter(emp => {
         const birthDate = new Date(emp.birthDate + 'T00:00:00');
-        return birthDate.getMonth() === todayBrazil.getMonth() && 
+        return birthDate.getMonth() === todayBrazil.getMonth() &&
                birthDate.getDate() === todayBrazil.getDate();
       }).length;
-      
+
       const messagesSent = messages.filter(msg => msg.status === 'sent').length;
-      
+
       const upcomingBirthdays = employees
         .map(emp => {
           // Usar fuso horário brasileiro para data atual
           const now = new Date();
           const todayBrazil = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-          
+
           const birthDate = new Date(emp.birthDate + 'T00:00:00');
           const thisYearBirthday = new Date(todayBrazil.getFullYear(), birthDate.getMonth(), birthDate.getDate());
-          
+
           // Se o aniversário já passou este ano, calcular para o próximo ano
           const todayOnly = new Date(todayBrazil.getFullYear(), todayBrazil.getMonth(), todayBrazil.getDate());
           if (thisYearBirthday < todayOnly) {
             thisYearBirthday.setFullYear(todayBrazil.getFullYear() + 1);
           }
-          
+
           const daysUntil = Math.ceil((thisYearBirthday.getTime() - todayOnly.getTime()) / (1000 * 60 * 60 * 24));
-          
+
           return {
             employee: emp,
             daysUntil,
@@ -456,12 +497,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .filter(item => item.daysUntil <= 7)
         .sort((a, b) => a.daysUntil - b.daysUntil);
-      
+
       const recentMessages = messages
         .filter(msg => msg.sentAt)
         .sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())
         .slice(0, 10);
-      
+
       res.json({
         totalEmployees,
         thisMonthBirthdays,

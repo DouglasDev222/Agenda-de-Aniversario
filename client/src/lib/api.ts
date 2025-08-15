@@ -144,7 +144,32 @@ export const api = {
 
   // Message API
   messages: {
-    getAll: () => request<Message[]>("/messages"),
+    getAll: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    }): Promise<{
+      messages: Message[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
+    }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.append('page', params.page.toString());
+      if (params?.limit) searchParams.append('limit', params.limit.toString());
+      if (params?.status) searchParams.append('status', params.status);
+
+      const response = await fetch(`/api/messages?${searchParams}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) throw new Error("Failed to fetch messages");
+      return response.json();
+    },
   },
 
   // Settings API

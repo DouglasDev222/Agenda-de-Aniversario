@@ -12,16 +12,34 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Messages() {
   const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   const { toast } = useToast();
 
-  const { data: messages, isLoading } = useQuery({
-    queryKey: ["/api/messages"],
-    queryFn: api.messages.getAll,
+  const { data: messagesData, isLoading } = useQuery({
+    queryKey: ["/api/messages", currentPage, pageSize, statusFilter],
+    queryFn: () => api.messages.getAll({ 
+      page: currentPage, 
+      limit: pageSize, 
+      status: statusFilter || undefined 
+    }),
   });
+
+  const messages = messagesData?.messages || [];
+  const pagination = messagesData?.pagination;
 
   const { data: employeesData } = useQuery({
     queryKey: ["/api/employees"],
@@ -172,11 +190,14 @@ export default function Messages() {
     }
   };
 
-  const filteredMessages = Array.isArray(messages) ? messages.filter((message) => {
-    return (
-      !statusFilter || statusFilter === "all" || message.status === statusFilter
-    );
-  }) : [];
+  // Reset to first page when filter changes
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  // Messages are already filtered by the API, so we use them directly
+  const filteredMessages = messages;
 
   const messageStats = {
     sent: Array.isArray(messages) ? messages.filter((m) => m.status === "sent").length : 0,
@@ -302,7 +323,7 @@ export default function Messages() {
           <div className="flex items-center justify-between">
             <CardTitle>Histórico de Mensagens</CardTitle>
             <div className="flex space-x-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
@@ -425,6 +446,123 @@ export default function Messages() {
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-6 lg:justify-between mt-6">
+              <div className="hidden lg:flex text-sm text-gray-500">
+                Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, pagination.total)} de {pagination.total} mensagens
+              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (pagination.hasPrev) {
+                          setCurrentPage(currentPage - 1);
+                        }
+                      }}
+                      className={!pagination.hasPrev ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {(() => {
+                    const pages = [];
+                    const totalPages = pagination.totalPages;
+                    
+                    // Always show first page
+                    if (totalPages > 0) {
+                      pages.push(
+                        <PaginationItem key={1}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(1);
+                            }}
+                            isActive={currentPage === 1}
+                          >
+                            1
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    // Show ellipsis if needed
+                    if (currentPage > 3) {
+                      pages.push(
+                        <PaginationItem key="ellipsis-start">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    // Show current page and neighbors
+                    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                      pages.push(
+                        <PaginationItem key={i}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(i);
+                            }}
+                            isActive={currentPage === i}
+                          >
+                            {i}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    // Show ellipsis if needed
+                    if (currentPage < totalPages - 2) {
+                      pages.push(
+                        <PaginationItem key="ellipsis-end">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    // Always show last page if more than 1 page
+                    if (totalPages > 1) {
+                      pages.push(
+                        <PaginationItem key={totalPages}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(totalPages);
+                            }}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    }
+                    
+                    return pages;
+                  })()}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (pagination.hasNext) {
+                          setCurrentPage(currentPage + 1);
+                        }
+                      }}
+                      className={!pagination.hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
