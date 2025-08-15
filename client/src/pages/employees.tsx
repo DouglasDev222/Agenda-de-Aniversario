@@ -42,7 +42,7 @@ export default function Employees() {
     setCurrentPage(1);
   }, [searchQuery, positionFilter, monthFilter]);
 
-  const { data: employeesData, isLoading } = useQuery({
+  const { data: employeesData, isLoading, isFetching } = useQuery({
     queryKey: ["/api/employees", currentPage, pageSize, searchQuery, positionFilter, monthFilter],
     queryFn: () => api.employees.getAll({
       page: currentPage,
@@ -51,8 +51,8 @@ export default function Employees() {
       position: positionFilter,
       month: monthFilter
     }),
-    // Manter dados anteriores durante o carregamento para evitar flickering
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData, // Nova forma de manter dados anteriores
+    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
   });
 
   const employees = employeesData?.employees || [];
@@ -268,14 +268,7 @@ export default function Employees() {
     </Card>
   );
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-96" />
-      </div>
-    );
-  }
+  // Remover o loading global - vamos usar loading localizado
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -285,9 +278,25 @@ export default function Employees() {
       {/* Employees List - Componente que atualiza */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg lg:text-xl">Lista de Colaboradores</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg lg:text-xl">Lista de Colaboradores</CardTitle>
+            {isFetching && (
+              <div className="flex items-center text-sm text-gray-500">
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Atualizando...
+              </div>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 relative">
+          {isLoading && !employeesData && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-600">Carregando colaboradores...</span>
+              </div>
+            </div>
+          )}
           {/* Desktop Table View */}
           <div className="hidden lg:block">
             <div className="overflow-x-auto">
