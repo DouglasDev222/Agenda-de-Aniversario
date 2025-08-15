@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,8 @@ export default function Employees() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [deleteEmployee, setDeleteEmployee] = useState<Employee | undefined>();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // Input value for immediate UI update
+  const [searchQuery, setSearchQuery] = useState(""); // Debounced value for API calls
   const [positionFilter, setPositionFilter] = useState("");
   const [monthFilter, setMonthFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,6 +27,15 @@ export default function Employees() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Debounce search input
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -191,8 +201,8 @@ export default function Employees() {
                 </div>
                 <Input
                   id="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Digite o nome do colaborador..."
                   className="pl-10"
                 />
