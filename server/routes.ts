@@ -6,7 +6,7 @@ import { schedulerService } from "./services/scheduler";
 import { insertEmployeeSchema, insertContactSchema, insertSettingsSchema, insertUserSchema, loginSchema } from "@shared/schema";
 import { authenticateToken, requireAdmin, requireManagement, generateToken } from "./middleware/auth";
 import { eq, like, or, and, count, desc, asc, sql } from "drizzle-orm";
-import { messagesTable } from "@shared/schema"; // Assuming messagesTable is exported from @shared/schema
+import { messages } from "@shared/schema"; // Assuming messagesTable is exported from @shared/schema
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize storage first
@@ -220,37 +220,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build where conditions
       const whereConditions = [];
       if (status && status !== 'all') {
-        whereConditions.push(eq(messagesTable.status, status));
+        whereConditions.push(eq(messages.status, status));
       }
 
       // Get total count
-      let totalQuery = storage.db.select({ count: sql<number>`count(*)` }).from(messagesTable);
+      let totalQuery = storage.db.select({ count: sql<number>`count(*)` }).from(messages);
       if (whereConditions.length > 0) {
         totalQuery = totalQuery.where(and(...whereConditions));
       }
       const [{ count: total }] = await totalQuery;
 
       // Get paginated messages
-      let messagesQuery = storage.db.select().from(messagesTable).orderBy(desc(messagesTable.createdAt));
+      let messagesQuery = storage.db.select().from(messages).orderBy(desc(messages.createdAt));
       if (whereConditions.length > 0) {
         messagesQuery = messagesQuery.where(and(...whereConditions));
       }
-      const messages = await messagesQuery.limit(limit).offset(offset);
+      const messagesData = await messagesQuery.limit(limit).offset(offset);
 
       const totalPages = Math.ceil(total / limit);
       const hasNext = page < totalPages;
       const hasPrev = page > 1;
 
       res.json({
-        messages,
+        messages: messagesData,
         pagination: {
           page,
           limit,
           total,
           totalPages,
           hasNext,
-          hasPrev,
-        },
+          hasPrev: page > 1,
+        }
       });
     } catch (error) {
       console.error("Error fetching messages:", error);
