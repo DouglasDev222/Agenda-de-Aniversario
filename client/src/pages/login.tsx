@@ -19,7 +19,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(username, password);
+      await login(username.toLowerCase().trim(), password);
       toast({
         title: "Sucesso",
         description: "Login realizado com sucesso!",

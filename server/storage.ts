@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
+import * as crypto from 'crypto';
 
 import {
   employees,
@@ -130,27 +131,27 @@ export class MemStorage implements IStorage {
     };
   }> {
     let employees = Array.from(this.employees.values());
-    
+
     // Apply filters
     if (search) {
-      employees = employees.filter(emp => 
+      employees = employees.filter(emp =>
         emp.name.toLowerCase().includes(search.toLowerCase())
       );
     }
-    
+
     if (position && position !== "all") {
-      employees = employees.filter(emp => 
+      employees = employees.filter(emp =>
         emp.position.toLowerCase().includes(position.toLowerCase())
       );
     }
-    
+
     if (month && month !== "all") {
       employees = employees.filter(emp => {
         const birthMonth = new Date(emp.birthDate + 'T00:00:00').getMonth() + 1;
         return birthMonth.toString() === month;
       });
     }
-    
+
     // Sort by next birthday
     employees.sort((a, b) => {
       const getNextBirthday = (birthDate: string) => {
@@ -165,21 +166,21 @@ export class MemStorage implements IStorage {
         const diffTime = nextBirthday.getTime() - todayDateOnly.getTime();
         return Math.round(diffTime / (1000 * 60 * 60 * 24));
       };
-      
+
       const daysA = getNextBirthday(a.birthDate);
       const daysB = getNextBirthday(b.birthDate);
-      
+
       if (daysA === daysB) {
         return a.name.localeCompare(b.name);
       }
       return daysA - daysB;
     });
-    
+
     const total = employees.length;
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
     const paginatedEmployees = employees.slice(offset, offset + limit);
-    
+
     return {
       employees: paginatedEmployees,
       pagination: {
@@ -309,24 +310,27 @@ export class MemStorage implements IStorage {
   }
 
   // User methods (for MemStorage)
-  async createUser(data: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+  async createUser(userData: InsertUser): Promise<User> {
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+
     const user: User = {
-      ...data,
-      id,
+      id: crypto.randomUUID(),
+      ...userData,
+      username: userData.username.toLowerCase().trim(),
       password: hashedPassword,
-      role: data.role || "user", // Default role
       isActive: true,
+      createdAt: new Date(),
       lastLogin: null
     };
-    this.users.set(id, user);
+    this.users.set(user.id, user);
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | null> {
+    const lowerCaseUsername = username.toLowerCase().trim();
     for (const user of this.users.values()) {
-      if (user.username === username && user.isActive) {
+      if (user.username === lowerCaseUsername && user.isActive) {
         return user;
       }
     }
@@ -371,6 +375,7 @@ export class MemStorage implements IStorage {
     const updatedUser = {
       ...existingUser,
       ...data,
+      username: data.username ? data.username.toLowerCase().trim() : existingUser.username,
       password: hashedPassword,
       lastLogin: existingUser.lastLogin // Keep the existing lastLogin if not updated
     };
@@ -433,29 +438,29 @@ export class DatabaseStorage implements IStorage {
   }> {
     // For now, use simple in-memory pagination since we don't have complex SQL queries
     const allEmployees = await this.getEmployees();
-    
+
     // Apply filters
     let filteredEmployees = allEmployees;
-    
+
     if (search) {
-      filteredEmployees = filteredEmployees.filter(emp => 
+      filteredEmployees = filteredEmployees.filter(emp =>
         emp.name.toLowerCase().includes(search.toLowerCase())
       );
     }
-    
+
     if (position && position !== "all") {
-      filteredEmployees = filteredEmployees.filter(emp => 
+      filteredEmployees = filteredEmployees.filter(emp =>
         emp.position.toLowerCase().includes(position.toLowerCase())
       );
     }
-    
+
     if (month && month !== "all") {
       filteredEmployees = filteredEmployees.filter(emp => {
         const birthMonth = new Date(emp.birthDate + 'T00:00:00').getMonth() + 1;
         return birthMonth.toString() === month;
       });
     }
-    
+
     // Sort by next birthday
     filteredEmployees.sort((a, b) => {
       const getNextBirthday = (birthDate: string) => {
@@ -470,21 +475,21 @@ export class DatabaseStorage implements IStorage {
         const diffTime = nextBirthday.getTime() - todayDateOnly.getTime();
         return Math.round(diffTime / (1000 * 60 * 60 * 24));
       };
-      
+
       const daysA = getNextBirthday(a.birthDate);
       const daysB = getNextBirthday(b.birthDate);
-      
+
       if (daysA === daysB) {
         return a.name.localeCompare(b.name);
       }
       return daysA - daysB;
     });
-    
+
     const total = filteredEmployees.length;
     const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
     const paginatedEmployees = filteredEmployees.slice(offset, offset + limit);
-    
+
     return {
       employees: paginatedEmployees,
       pagination: {
@@ -532,7 +537,9 @@ export class DatabaseStorage implements IStorage {
 
   async createContact(contact: InsertContact): Promise<Contact> {
     const id = randomUUID();
-    const newContact = { ...contact, id };
+    const newContact = { ...contact, id,
+      isActive: contact.isActive ?? true
+    };
     const result = await this.db.insert(contacts).values(newContact).returning();
     return result[0];
   }
@@ -625,6 +632,7 @@ export class DatabaseStorage implements IStorage {
 
     const [user] = await this.db.insert(users).values({
       ...userData,
+      username: userData.username.toLowerCase().trim(),
       password: hashedPassword
     }).returning();
 
@@ -635,7 +643,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db
       .select()
       .from(users)
-      .where(and(eq(users.username, username), eq(users.isActive, true)))
+      .where(and(eq(users.username, username.toLowerCase().trim()), eq(users.isActive, true)))
       .limit(1);
     return user || null;
   }
@@ -653,7 +661,7 @@ export class DatabaseStorage implements IStorage {
   async validateUserPassword(username: string, password: string): Promise<User | null> {
     const [user] = await this.db.select()
       .from(users)
-      .where(eq(users.username, username))
+      .where(eq(users.username, username.toLowerCase().trim()))
       .limit(1);
 
     if (!user) {
@@ -689,6 +697,9 @@ export class DatabaseStorage implements IStorage {
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
+    if (data.username) {
+      data.username = data.username.toLowerCase().trim();
+    }
 
     const [user] = await this.db
       .update(users)
@@ -716,7 +727,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       console.log('🔧 Criando usuário admin padrão...');
-      
+
       // Create default admin user
       const adminUser = await this.createUser({
         username: 'admin',
