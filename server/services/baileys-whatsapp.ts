@@ -1,27 +1,15 @@
 
-// Try ES6 import first, fallback to require if needed
-let makeWASocket: any;
-let DisconnectReason: any;
-let useMultiFileAuthState: any;
-let fetchLatestBaileysVersion: any;
-let WAMessageKey: any;
-let proto: any;
-
-try {
-  const baileys = require('@whiskeysockets/baileys');
-  makeWASocket = baileys.default || baileys.makeWASocket;
-  DisconnectReason = baileys.DisconnectReason;
-  useMultiFileAuthState = baileys.useMultiFileAuthState;
-  fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
-  WAMessageKey = baileys.WAMessageKey;
-  proto = baileys.proto;
-} catch (error) {
-  console.error('❌ Erro ao importar Baileys:', error);
-  throw new Error('Failed to import Baileys library');
-}
+import makeWASocket, { 
+  DisconnectReason, 
+  useMultiFileAuthState, 
+  fetchLatestBaileysVersion,
+  WAMessageKey,
+  proto
+} from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import P from 'pino';
 import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 
 export class BaileysWhatsAppService {
   private sock: any = null;
@@ -39,11 +27,6 @@ export class BaileysWhatsAppService {
     console.log('🚀 Inicializando Baileys WhatsApp Service...');
     
     try {
-      // Validate that makeWASocket is available
-      if (!makeWASocket || typeof makeWASocket !== 'function') {
-        throw new Error('makeWASocket function is not available - check Baileys installation');
-      }
-      
       this.connectionStatus = 'connecting';
       
       // Fetch latest version of WA Web
@@ -68,9 +51,17 @@ export class BaileysWhatsAppService {
         
         if (qr) {
           console.log('📱 QR Code recebido!');
-          this.qrCodeString = qr;
           this.connectionStatus = 'waiting_qr';
           qrcode.generate(qr, { small: true });
+          
+          // Generate QR code as data URL for web display
+          try {
+            this.qrCodeString = await QRCode.toDataURL(qr);
+            console.log('📱 QR Code gerado para exibição web');
+          } catch (qrError) {
+            console.error('❌ Erro ao gerar QR code para web:', qrError);
+            this.qrCodeString = qr; // fallback to raw string
+          }
         }
 
         if (connection === 'close') {

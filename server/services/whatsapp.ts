@@ -1,4 +1,4 @@
-import { baileysWhatsAppService } from './baileys-whatsapp.js';
+import { baileysWhatsAppService } from './baileys-whatsapp';
 import { WhatsAppBusinessAPIService } from './whatsapp-business-api.js';
 
 export class WhatsAppService {
