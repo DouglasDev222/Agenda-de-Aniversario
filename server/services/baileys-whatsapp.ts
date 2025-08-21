@@ -1,8 +1,18 @@
 
-import * as Baileys from '@whiskeysockets/baileys';
+// Use createRequire to import CommonJS modules in ES modules environment
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
-const makeWASocket = Baileys.default || Baileys.makeWASocket;
-const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, WAMessageKey, proto } = Baileys;
+// Import Baileys using require
+const {
+  default: makeWASocket,
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  WAMessageKey,
+  proto
+} = require('@whiskeysockets/baileys');
+
 import { Boom } from '@hapi/boom';
 import P from 'pino';
 import qrcode from 'qrcode-terminal';
