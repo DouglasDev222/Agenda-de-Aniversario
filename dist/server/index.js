@@ -45,7 +45,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 import express from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite.js";
+import { setupVite, serveStatic, log } from "./vite";
 import dotenv from "dotenv";
 dotenv.config();
 var app = express();

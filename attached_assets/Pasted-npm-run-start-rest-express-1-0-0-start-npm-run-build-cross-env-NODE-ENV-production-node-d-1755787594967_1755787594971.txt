@@ -1,0 +1,92 @@
+npm run start
+
+> rest-express@1.0.0 start
+> npm run build && cross-env NODE_ENV=production node dist/server/index.js
+
+
+> rest-express@1.0.0 build
+> npm run clean && npm run build:client && npm run build:server
+
+
+> rest-express@1.0.0 clean
+> rm -rf dist
+
+
+> rest-express@1.0.0 build:client
+> vite build
+
+vite v5.4.19 building for production...
+transforming (3) src/main.tsxBrowserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 1742 modules transformed.
+../dist/public/index.html                   1.07 kB │ gzip:   0.61 kB
+../dist/public/assets/index-CFJvEFXj.css   68.91 kB │ gzip:  11.96 kB
+../dist/public/assets/index-DOjVVLwa.js   857.69 kB │ gzip: 270.72 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 9.89s
+
+> rest-express@1.0.0 build:server
+> tsc --project tsconfig.server.json
+
+server/routes.ts:446:58 - error TS2304: Cannot find name 'phoneNumber'.
+
+446       console.log(`💥 Teste manual: Erro no envio para ${phoneNumber}:`, error);
+                                                             ~~~~~~~~~~~
+
+server/services/baileys-whatsapp.ts:325:25 - error TS2749: 'WAMessageKey' refers to a value, but is being used as a type here. Did you mean 'typeof WAMessageKey'?
+
+325   async markAsRead(key: WAMessageKey): Promise<void> {
+                            ~~~~~~~~~~~~
+
+server/services/scheduler.ts:4:45 - error TS2307: Cannot find module '../types' or its corresponding type declarations.
+
+4 import { Employee, Contact, Settings } from '../types'; // Assuming these types are defined elsewhere
+                                              ~~~~~~~~~~
+
+server/services/whatsapp.ts:120:5 - error TS2741: Property 'simulateMode' is missing in type '{ isConnected: boolean; status: string; qrCode: string | null; realConnection: boolean; }' but required in type '{ isConnected: boolean; status: string; qrCode: string | null; simulateMode: boolean; realConnection: boolean; }'.
+
+120     return baileysWhatsAppService.getConnectionStatus();
+        ~~~~~~
+
+  server/services/whatsapp.ts:94:5
+    94     simulateMode: boolean;
+           ~~~~~~~~~~~~
+    'simulateMode' is declared here.
+
+server/storage.ts:106:11 - error TS2739: Type '{ id: `${string}-${string}-${string}-${string}-${string}`; username: string; password: string; role: string; isActive: true; lastLogin: null; }' is missing the following properties from type '{ id: string; email: string; role: string; isActive: boolean; username: string; password: string; createdAt: Date; lastLogin: Date | null; }': email, createdAt
+
+106     const adminUser: User = {
+              ~~~~~~~~~
+
+server/storage.ts:317:11 - error TS2322: Type '{ username: string; password: string; isActive: true; createdAt: Date; lastLogin: null; email: string; role?: string | undefined; id: `${string}-${string}-${string}-${string}-${string}`; }' is not assignable to type '{ id: string; email: string; role: string; isActive: boolean; username: string; password: string; createdAt: Date; lastLogin: Date | null; }'.
+  Types of property 'role' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+
+317     const user: User = {
+              ~~~~
+
+server/storage.ts:332:24 - error TS2802: Type 'MapIterator<{ id: string; email: string; role: string; isActive: boolean; username: string; password: string; createdAt: Date; lastLogin: Date | null; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+332     for (const user of this.users.values()) {
+                           ~~~~~~~~~~~~~~~~~~~
+
+server/storage.ts:721:12 - error TS18047: 'result.rowCount' is possibly 'null'.
+
+721     return result.rowCount > 0;
+               ~~~~~~~~~~~~~~~
+
+
+Found 8 errors in 5 files.
+
+Errors  Files
+     1  server/routes.ts:446
+     1  server/services/baileys-whatsapp.ts:325
+     1  server/services/scheduler.ts:4
+     1  server/services/whatsapp.ts:120
+     4  server/storage.ts:106
