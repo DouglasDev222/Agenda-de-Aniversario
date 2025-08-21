@@ -1,11 +1,8 @@
 
-import makeWASocket, { 
-  DisconnectReason, 
-  useMultiFileAuthState, 
-  fetchLatestBaileysVersion,
-  WAMessageKey,
-  proto
-} from '@whiskeysockets/baileys';
+import * as Baileys from '@whiskeysockets/baileys';
+
+const makeWASocket = Baileys.default || Baileys.makeWASocket;
+const { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, WAMessageKey, proto } = Baileys;
 import { Boom } from '@hapi/boom';
 import P from 'pino';
 import qrcode from 'qrcode-terminal';
