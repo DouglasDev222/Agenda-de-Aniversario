@@ -1,11 +1,24 @@
 
-import makeWASocket, { 
-  DisconnectReason, 
-  useMultiFileAuthState, 
-  fetchLatestBaileysVersion,
-  WAMessageKey,
-  proto
-} from '@whiskeysockets/baileys';
+// Try ES6 import first, fallback to require if needed
+let makeWASocket: any;
+let DisconnectReason: any;
+let useMultiFileAuthState: any;
+let fetchLatestBaileysVersion: any;
+let WAMessageKey: any;
+let proto: any;
+
+try {
+  const baileys = require('@whiskeysockets/baileys');
+  makeWASocket = baileys.default || baileys.makeWASocket;
+  DisconnectReason = baileys.DisconnectReason;
+  useMultiFileAuthState = baileys.useMultiFileAuthState;
+  fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+  WAMessageKey = baileys.WAMessageKey;
+  proto = baileys.proto;
+} catch (error) {
+  console.error('❌ Erro ao importar Baileys:', error);
+  throw new Error('Failed to import Baileys library');
+}
 import { Boom } from '@hapi/boom';
 import P from 'pino';
 import qrcode from 'qrcode-terminal';
@@ -26,6 +39,11 @@ export class BaileysWhatsAppService {
     console.log('🚀 Inicializando Baileys WhatsApp Service...');
     
     try {
+      // Validate that makeWASocket is available
+      if (!makeWASocket || typeof makeWASocket !== 'function') {
+        throw new Error('makeWASocket function is not available - check Baileys installation');
+      }
+      
       this.connectionStatus = 'connecting';
       
       // Fetch latest version of WA Web
