@@ -406,7 +406,7 @@ export async function registerRoutes(app) {
             }
         }
         catch (error) {
-            console.log(`💥 Teste manual: Erro no envio para ${phone}:`, error);
+            console.log(`💥 Teste manual: Erro no envio para ${phoneNumber}:`, error);
             res.status(500).json({ error: "Failed to send test message" });
         }
     });

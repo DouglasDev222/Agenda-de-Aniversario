@@ -537,7 +537,7 @@ export class DatabaseStorage {
             .update(users)
             .set({ isActive: false })
             .where(eq(users.id, id));
-        return result.rowCount > 0;
+        return (result.rowCount ?? 0) > 0;
     }
     async createDefaultUser() {
         try {
