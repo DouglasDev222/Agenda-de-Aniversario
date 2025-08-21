@@ -46,7 +46,7 @@ export class BaileysWhatsAppService {
       });
 
       // Handle connection updates
-      this.sock.ev.on('connection.update', (update: any) => {
+      this.sock.ev.on('connection.update', async (update: any) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
