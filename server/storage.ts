@@ -103,13 +103,16 @@ export class MemStorage implements IStorage {
     };
 
     // Initialize a default admin user for MemStorage
+    const hashedPassword = bcrypt.hashSync("password", 10); // Hash the password
     const adminUser: User = {
-      id: randomUUID(),
-      username: "admin",
-      password: "password", // In a real app, this should be hashed
-      role: "admin",
+      id: crypto.randomUUID(),
+      email: 'admin@localhost',
+      username: 'admin',
+      password: hashedPassword,
+      role: 'admin',
       isActive: true,
-      lastLogin: null
+      createdAt: new Date(),
+      lastLogin: null,
     };
     this.users.set(adminUser.id, adminUser);
   }
@@ -316,12 +319,13 @@ export class MemStorage implements IStorage {
 
     const user: User = {
       id: crypto.randomUUID(),
-      ...userData,
       username: userData.username.toLowerCase().trim(),
       password: hashedPassword,
       isActive: true,
       createdAt: new Date(),
-      lastLogin: null
+      lastLogin: null,
+      email: userData.email,
+      role: userData.role || 'user',
     };
     this.users.set(user.id, user);
     return user;
@@ -368,7 +372,7 @@ export class MemStorage implements IStorage {
     if (!existingUser || !existingUser.isActive) return null;
 
     const updateData: any = { ...data };
-    
+
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
@@ -635,7 +639,8 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db.insert(users).values({
       ...userData,
       username: userData.username.toLowerCase().trim(),
-      password: hashedPassword
+      password: hashedPassword,
+      role: userData.role || 'user' // Ensure role is set, default to 'user'
     }).returning();
 
     return user;
@@ -697,12 +702,15 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | null> {
     const updateData: any = { ...data };
-    
+
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
     if (updateData.username) {
       updateData.username = updateData.username.toLowerCase().trim();
+    }
+    if (updateData.role) { // Ensure role is updated if provided
+      updateData.role = updateData.role;
     }
 
     const [user] = await this.db

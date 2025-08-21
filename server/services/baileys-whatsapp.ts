@@ -322,7 +322,7 @@ export class BaileysWhatsAppService {
     }
   }
 
-  async markAsRead(key: WAMessageKey): Promise<void> {
+  async markAsRead(key: any): Promise<void> {
     try {
       await this.sock.readMessages([key]);
     } catch (error) {

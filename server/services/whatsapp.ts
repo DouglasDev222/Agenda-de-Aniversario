@@ -117,7 +117,11 @@ export class WhatsAppService {
     }
 
     // Baileys status
-    return baileysWhatsAppService.getConnectionStatus();
+    const status = baileysWhatsAppService.getConnectionStatus();
+    return {
+      ...status,
+      simulateMode: false
+    };
   }
 
   async refreshQRCode(): Promise<string | null> {

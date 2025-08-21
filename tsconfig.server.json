@@ -8,7 +8,9 @@
     "declaration": false,
     "sourceMap": false,
     "allowImportingTsExtensions": false,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "downlevelIteration": true,
+    "target": "ES2020"
   },
   "include": [
     "server/**/*",

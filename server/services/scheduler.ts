@@ -1,7 +1,10 @@
 import * as cron from 'node-cron';
 import { storage } from '../storage';
 import { whatsappService } from './whatsapp';
-import { Employee, Contact, Settings } from '../types'; // Assuming these types are defined elsewhere
+// Types are imported from storage
+type Employee = any;
+type Contact = any;
+type Settings = any;
 
 export class SchedulerService {
   private reminderJob: cron.ScheduledTask | null = null;

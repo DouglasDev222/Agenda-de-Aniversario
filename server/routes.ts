@@ -443,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ error: "Failed to send test message" });
       }
     } catch (error) {
-      console.log(`💥 Teste manual: Erro no envio para ${phoneNumber}:`, error);
+      console.log(`💥 Teste manual: Erro no envio para ${phone}:`, error);
       res.status(500).json({ error: "Failed to send test message" });
     }
   });
