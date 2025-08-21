@@ -6,7 +6,9 @@
     "outDir": "./dist",
     "rootDir": ".",
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "allowImportingTsExtensions": false,
+    "moduleResolution": "node"
   },
   "include": [
     "server/**/*",
