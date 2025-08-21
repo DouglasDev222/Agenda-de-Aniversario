@@ -423,9 +423,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/whatsapp/send-test", authenticateToken, requireAdmin, async (req, res) => {
-    try {
-      const { phoneNumber, message } = req.body;
+    const { phoneNumber, message } = req.body;
 
+    try {
       if (!phoneNumber || !message) {
         return res.status(400).json({ error: "Phone number and message are required" });
       }
