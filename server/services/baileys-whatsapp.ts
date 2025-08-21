@@ -17,6 +17,8 @@ import { Boom } from '@hapi/boom';
 import P from 'pino';
 import qrcode from 'qrcode-terminal';
 import QRCode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
 
 export class BaileysWhatsAppService {
   private sock: any = null;
@@ -28,6 +30,20 @@ export class BaileysWhatsAppService {
 
   constructor() {
     this.logger.level = 'trace';
+  }
+
+  private async cleanAuthFolder(): Promise<void> {
+    const authPath = path.resolve('./baileys_auth_info');
+    
+    try {
+      if (fs.existsSync(authPath)) {
+        console.log('🧹 Limpando pasta de autenticação...');
+        fs.rmSync(authPath, { recursive: true, force: true });
+        console.log('✅ Pasta de autenticação limpa com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao limpar pasta de autenticação:', error);
+    }
   }
 
   async initialize(): Promise<void> {
@@ -72,16 +88,36 @@ export class BaileysWhatsAppService {
         }
 
         if (connection === 'close') {
-          const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-          console.log('❌ Conexão fechada devido a', lastDisconnect?.error, ', reconectando:', shouldReconnect);
+          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const errorMessage = lastDisconnect?.error?.message || '';
+          
+          console.log('❌ Conexão fechada devido a', lastDisconnect?.error, 'Status code:', statusCode);
           
           this.isConnected = false;
           this.connectionStatus = 'disconnected';
           this.qrCodeString = null;
 
-          // Reconnect if not logged out
-          if (shouldReconnect) {
-            setTimeout(() => this.initialize(), 3000);
+          // Check for authentication errors that require cleaning auth folder
+          const authErrors = [
+            DisconnectReason.loggedOut,
+            DisconnectReason.badSession,
+            DisconnectReason.unauthorized,
+            DisconnectReason.forbidden
+          ];
+          
+          const isConnectionFailure = errorMessage.includes('Connection Failure') || statusCode === 401;
+          const needsAuthCleanup = authErrors.includes(statusCode) || isConnectionFailure;
+
+          if (needsAuthCleanup) {
+            console.log('🔄 Erro de autenticação detectado - limpando credenciais...');
+            await this.cleanAuthFolder();
+            
+            // Don't auto-reconnect, user needs to manually connect to get new QR
+            console.log('📱 Pasta de autenticação limpa. Use o endpoint /api/whatsapp/connect para gerar novo QR Code');
+          } else {
+            // Only reconnect for network errors, not auth errors
+            console.log('🔄 Tentando reconectar em 5 segundos...');
+            setTimeout(() => this.initialize(), 5000);
           }
         } else if (connection === 'open') {
           console.log('✅ WhatsApp conectado com sucesso!');
@@ -244,6 +280,25 @@ export class BaileysWhatsAppService {
     this.qrCodeString = null;
     
     console.log('📱 Pronto para conectar - use o endpoint /api/whatsapp/connect');
+  }
+
+  async forceCleanAuth(): Promise<void> {
+    console.log('🧹 Forçando limpeza da autenticação...');
+    
+    // Close existing connection
+    if (this.sock) {
+      await this.close();
+    }
+    
+    // Clean auth folder
+    await this.cleanAuthFolder();
+    
+    // Reset status
+    this.isConnected = false;
+    this.connectionStatus = 'disconnected';
+    this.qrCodeString = null;
+    
+    console.log('✅ Autenticação limpa com sucesso - pronto para nova conexão');
   }
 
   // Métodos adicionais do Baileys

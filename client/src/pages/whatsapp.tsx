@@ -66,6 +66,14 @@ export default function WhatsAppPage() {
     },
   });
 
+  const forceCleanupMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/whatsapp/force-cleanup"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/status"] });
+      setAutoRefresh(true);
+    },
+  });
+
   useEffect(() => {
     if (status?.status === "connected") {
       setAutoRefresh(false);
@@ -238,6 +246,22 @@ export default function WhatsAppPage() {
                   variant="outline"
                 >
                   Voltar ao Modo Simulação
+                </Button>
+              )}
+
+              {(status?.status === "disconnected" || status?.status === "waiting_qr") && !status?.simulateMode && (
+                <Button
+                  onClick={() => forceCleanupMutation.mutate()}
+                  disabled={forceCleanupMutation.isPending}
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                >
+                  {forceCleanupMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Limpar e Reconectar
                 </Button>
               )}
             </div>

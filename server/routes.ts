@@ -362,6 +362,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/whatsapp/force-cleanup", authenticateToken, requireAdmin, async (_req, res) => {
+    try {
+      await whatsappService.forceCleanAuth();
+      const status = whatsappService.getConnectionStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to enable real mode" });
+    }
+  });
+
   // New Baileys-specific routes
   app.get("/api/whatsapp/profile-picture/:phoneNumber", authenticateToken, async (req, res) => {
     try {

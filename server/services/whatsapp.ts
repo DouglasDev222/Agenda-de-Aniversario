@@ -140,6 +140,17 @@ export class WhatsAppService {
     console.log('📱 Modo real ativado - use o endpoint /api/whatsapp/connect para conectar');
   }
 
+  async forceCleanAuth(): Promise<void> {
+    console.log('🧹 Forçando limpeza da autenticação WhatsApp...');
+    
+    if (this.simulateMode) {
+      console.log('⚠️ Modo simulação ativado - nenhuma limpeza necessária');
+      return;
+    }
+
+    await baileysWhatsAppService.forceCleanAuth();
+  }
+
   // Additional Baileys methods
   async getProfilePicture(phoneNumber: string): Promise<string | null> {
     if (this.simulateMode) return null;
