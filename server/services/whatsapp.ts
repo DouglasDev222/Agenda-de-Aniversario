@@ -1,136 +1,38 @@
-// Use createRequire to import CommonJS modules in ES modules environment
-import { createRequire } from 'module';
+import { baileysWhatsAppService } from './baileys-whatsapp.js';
 import { WhatsAppBusinessAPIService } from './whatsapp-business-api.js';
-const require = createRequire(import.meta.url);
-
-const createWhatsAppClient = async () => {
-  // Since whatsapp-web.js is CommonJS, we use require with createRequire
-  const { Client, LocalAuth } = require('whatsapp-web.js');
-  const qrcode = require("qrcode");
-  return { Client, LocalAuth, qrcode };
-};
 
 export class WhatsAppService {
-  private client: any | null = null;
-  private isConnected = false;
-  private simulateMode = false; // Habilitado por padrão no ambiente Replit
-  private qrCode: string | null = null;
-  private connectionStatus: 'disconnected' | 'waiting_qr' | 'connecting' | 'connected' = 'disconnected';
-  private modules: any = null;
   private businessAPI: WhatsAppBusinessAPIService;
+  private simulateMode = false;
+
+  constructor() {
+    this.businessAPI = new WhatsAppBusinessAPIService();
+  }
 
   async initialize(): Promise<void> {
-    this.businessAPI = new WhatsAppBusinessAPIService();
-    
-    // Se a Business API estiver configurada, use-a em vez do modo simulação
+    console.log('🚀 Inicializando WhatsApp Service com Baileys...');
+
+    // Check if Business API is configured first
     if (this.businessAPI.isConfigured()) {
       console.log('✅ WhatsApp Business API configurada - usando API oficial');
-      this.simulateMode = false;
-      this.isConnected = true;
-      this.connectionStatus = 'connected';
       return;
     }
-    
+
     if (this.simulateMode) {
-      console.log('✅ WhatsApp Service initialized in simulation mode (recommended for Replit)');
-      this.isConnected = true;
-      this.connectionStatus = 'connected';
+      console.log('✅ WhatsApp Service initialized in simulation mode');
       return;
     }
 
-    this.connectionStatus = 'connecting';
-    console.log('🔄 Iniciando conexão com WhatsApp Web usando whatsapp-web.js...');
-
-    try {
-      // Load modules using require (CommonJS)
-      this.modules = await createWhatsAppClient();
-      const { Client, LocalAuth } = this.modules;
-
-      // Create authentication strategy
-      const authStrategy = new LocalAuth({
-        dataPath: './whatsapp-sessions'
-      });
-
-      // Initialize WhatsApp Web client with local authentication
-      this.client = new Client({
-        authStrategy: authStrategy,
-        puppeteer: {
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor',
-            '--single-process',
-            '--no-zygote'
-          ]
-        }
-      });
-
-      // Setup event listeners
-      this.client.on('qr', (qr: string) => {
-        console.log('📱 QR Code recebido! Escaneie com seu WhatsApp:');
-        console.log(qr);
-        this.modules.qrcode.toDataURL(qr, (err: any, url: string) => {
-          if (err) {
-            console.error("Erro ao gerar QR Code como data URL:", err);
-            this.qrCode = null;
-          } else {
-            this.qrCode = url; // Atribui a URL completa
-          }
-        });
-
-        this.connectionStatus = 'waiting_qr';
-      });
-
-      this.client.on('ready', () => {
-        console.log('✅ WhatsApp Web conectado com sucesso!');
-        this.isConnected = true;
-        this.connectionStatus = 'connected';
-        this.qrCode = null;
-      });
-
-      this.client.on('authenticated', () => {
-        console.log('🔐 WhatsApp autenticado com sucesso!');
-      });
-
-      this.client.on('auth_failure', (msg: string) => {
-        console.error('❌ Falha na autenticação WhatsApp:', msg);
-        this.connectionStatus = 'disconnected';
-        this.isConnected = false;
-      });
-
-      this.client.on('disconnected', (reason: string) => {
-        console.log('⚠️ WhatsApp desconectado:', reason);
-        this.connectionStatus = 'disconnected';
-        this.isConnected = false;
-        this.qrCode = null;
-      });
-
-      // Initialize the client
-      await this.client.initialize();
-
-    } catch (error) {
-      console.error('❌ Falha ao inicializar WhatsApp:', error);
-      console.log('🔄 Retornando ao modo simulação devido a erro de inicialização');
-      this.connectionStatus = 'disconnected';
-      this.simulateMode = true;
-      this.isConnected = true;
-      this.connectionStatus = 'connected';
-    }
+    // Initialize Baileys
+    await baileysWhatsAppService.initialize();
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<boolean> {
-    if (!this.isConnected) {
-      throw new Error('WhatsApp is not connected');
-    }
-
     console.log(`🎯 ENVIO DE MENSAGEM INICIADO:`);
     console.log(`📞 Número de destino: ${phoneNumber}`);
     console.log(`💬 Mensagem: ${message.substring(0, 100)}...`);
 
-    // Prioridade: Business API > WhatsApp-Web.js > Simulação
+    // Priority: Business API > Baileys > Simulation
     if (this.businessAPI && this.businessAPI.isConfigured()) {
       console.log(`🔄 Usando WhatsApp Business API para envio`);
       return await this.businessAPI.sendMessage(phoneNumber, message);
@@ -143,63 +45,12 @@ export class WhatsAppService {
       return true;
     }
 
-    if (!this.client) {
-      throw new Error('WhatsApp client is not initialized');
-    }
-
-    try {
-      // Remove tudo que não é número
-      let formattedNumber = phoneNumber.replace(/\D/g, '');
-      console.log(`🔄 Número original: ${phoneNumber}, Limpo: ${formattedNumber}`);
-
-      // Se for número brasileiro sem código do país, adiciona "55"
-      if (!formattedNumber.startsWith('55')) {
-        formattedNumber = '55' + formattedNumber;
-        console.log(`🇧🇷 Adicionado código do país: ${formattedNumber}`);
-      }
-
-      // Monta o chatId no formato WhatsApp
-      const chatId = formattedNumber + '@c.us';
-      console.log(`📱 Chat ID final: ${chatId}`);
-
-      // Verifica se o número existe no WhatsApp
-      try {
-        const numberId = await this.client.getNumberId(formattedNumber);
-        if (numberId) {
-          console.log(`✅ Número ${formattedNumber} está registrado no WhatsApp`);
-        } else {
-          console.log(`⚠️ Número ${formattedNumber} NÃO está registrado no WhatsApp`);
-          return false;
-        }
-    } catch (checkError) {
-      console.log(`⚠️ Não foi possível verificar se o número está no WhatsApp:`, checkError);
-    }
-
-  console.log(`📤 Enviando mensagem via WhatsApp-Web.js para ${phoneNumber} (${chatId})`);
-
-  // Envia a mensagem
-  const result = await this.client.sendMessage(chatId, message);
-
-  console.log(`✅ Mensagem enviada com sucesso para ${phoneNumber}!`);
-  console.log(`📋 ID da mensagem: ${result.id}`);
-  console.log(`🕐 Timestamp: ${result.timestamp}`);
-  
-  return true;
-
-} catch (error) {
-  console.error(`❌ Falha ao enviar mensagem para ${phoneNumber}:`, error);
-      
-      // Log detalhado do erro
-      if (error.message) {
-        console.error(`❌ Mensagem do erro: ${error.message}`);
-      }
-      
-      return false;
-    }
+    // Use Baileys
+    return await baileysWhatsAppService.sendMessage(phoneNumber, message);
   }
 
   async testConnection(): Promise<{ connected: boolean; status: string; simulateMode: boolean; realConnection: boolean }> {
-    // Se estiver usando Business API, verificar se está configurada
+    // Business API check
     if (this.businessAPI && this.businessAPI.isConfigured()) {
       console.log('🔍 Testando conexão WhatsApp Business API');
       const isConfigured = this.businessAPI.isConfigured();
@@ -211,9 +62,9 @@ export class WhatsAppService {
       };
     }
 
-    // Se estiver em modo simulação, retornar true pois está "funcionando"
+    // Simulation mode check
     if (this.simulateMode) {
-      console.log('🔍 Testando conexão WhatsApp (modo simulação - funcionando)');
+      console.log('🔍 Testando conexão WhatsApp (modo simulação)');
       return {
         connected: true,
         status: 'connected',
@@ -222,50 +73,18 @@ export class WhatsAppService {
       };
     }
 
-    if (!this.client) {
-      console.log('❌ Cliente WhatsApp não inicializado');
-      return {
-        connected: false,
-        status: 'disconnected',
-        simulateMode: false,
-        realConnection: false
-      };
-    }
-
-    try {
-      const state = await this.client.getState();
-      console.log('📊 Estado do WhatsApp:', state);
-      this.isConnected = state === 'CONNECTED';
-      return {
-        connected: this.isConnected,
-        status: this.isConnected ? 'connected' : 'disconnected',
-        simulateMode: false,
-        realConnection: this.isConnected
-      };
-    } catch (error) {
-      console.error('❌ Erro ao testar conexão:', error);
-      this.isConnected = false;
-      return {
-        connected: false,
-        status: 'disconnected',
-        simulateMode: false,
-        realConnection: false
-      };
-    }
+    // Baileys connection test
+    const baileysStatus = await baileysWhatsAppService.testConnection();
+    return {
+      connected: baileysStatus.connected,
+      status: baileysStatus.status,
+      simulateMode: false,
+      realConnection: baileysStatus.realConnection
+    };
   }
 
   async close(): Promise<void> {
-    if (this.client) {
-      try {
-        await this.client.destroy();
-        console.log('🔌 WhatsApp client desconectado');
-      } catch (error) {
-        console.error('Erro ao fechar cliente WhatsApp:', error);
-      }
-      this.client = null;
-      this.isConnected = false;
-      this.connectionStatus = 'disconnected';
-    }
+    await baileysWhatsAppService.close();
   }
 
   getConnectionStatus(): { 
@@ -275,62 +94,105 @@ export class WhatsAppService {
     simulateMode: boolean;
     realConnection: boolean;
   } {
-    // Verificar se há uma conexão real (Business API ou WhatsApp-Web.js)
-    const hasRealConnection = (this.businessAPI && this.businessAPI.isConfigured()) || 
-                              (!this.simulateMode && this.isConnected);
+    // Business API status
+    if (this.businessAPI && this.businessAPI.isConfigured()) {
+      return {
+        isConnected: true,
+        status: 'connected',
+        qrCode: null,
+        simulateMode: false,
+        realConnection: true
+      };
+    }
 
-    return {
-      isConnected: this.isConnected,
-      status: this.connectionStatus,
-      qrCode: this.qrCode,
-      simulateMode: this.simulateMode,
-      realConnection: hasRealConnection
-    };
+    // Simulation mode status
+    if (this.simulateMode) {
+      return {
+        isConnected: true,
+        status: 'connected',
+        qrCode: null,
+        simulateMode: true,
+        realConnection: false
+      };
+    }
+
+    // Baileys status
+    return baileysWhatsAppService.getConnectionStatus();
   }
 
   async refreshQRCode(): Promise<string | null> {
-    if (this.connectionStatus !== 'waiting_qr' || this.simulateMode) {
-      return this.qrCode;
-    }
-
-    try {
-      // For whatsapp-web.js, QR code refresh is handled automatically
-      // We just return the current QR code
-      console.log('🔄 QR Code atual disponível');
-      return this.qrCode;
-    } catch (error) {
-      console.error('❌ Erro ao atualizar QR code:', error);
+    if (this.simulateMode) {
       return null;
     }
+    return await baileysWhatsAppService.refreshQRCode();
   }
 
   async enableSimulationMode(): Promise<void> {
     this.simulateMode = true;
-    this.isConnected = true;
-    this.connectionStatus = 'connected';
-    this.qrCode = null;
-
-    if (this.client) {
-      await this.close();
-    }
-
+    await baileysWhatsAppService.close();
     console.log('✅ Modo simulação ativado');
   }
 
   async enableRealMode(): Promise<void> {
-    console.log('🔄 Desabilitando modo simulação - preparando conexão real com WhatsApp Web');
+    console.log('🔄 Desabilitando modo simulação - preparando conexão real com Baileys');
+    this.simulateMode = false;
+    await baileysWhatsAppService.enableRealMode();
+    console.log('📱 Modo real ativado - use o endpoint /api/whatsapp/connect para conectar');
+  }
 
-    // Close any existing client connection
-    if (this.client) {
-      await this.close();
+  // Additional Baileys methods
+  async getProfilePicture(phoneNumber: string): Promise<string | null> {
+    if (this.simulateMode) return null;
+
+    let formattedNumber = phoneNumber.replace(/\D/g, '');
+    if (!formattedNumber.startsWith('55')) {
+      formattedNumber = '55' + formattedNumber;
+    }
+    const jid = formattedNumber + '@s.whatsapp.net';
+
+    return await baileysWhatsAppService.getProfilePicture(jid);
+  }
+
+  async getStatus(phoneNumber: string): Promise<string | null> {
+    if (this.simulateMode) return null;
+
+    let formattedNumber = phoneNumber.replace(/\D/g, '');
+    if (!formattedNumber.startsWith('55')) {
+      formattedNumber = '55' + formattedNumber;
+    }
+    const jid = formattedNumber + '@s.whatsapp.net';
+
+    return await baileysWhatsAppService.getStatus(jid);
+  }
+
+  async sendMediaFromUrl(phoneNumber: string, url: string, caption?: string): Promise<boolean> {
+    if (this.simulateMode) {
+      console.log(`📱 MODO SIMULAÇÃO - Enviando mídia para ${phoneNumber}: ${url}`);
+      return true;
     }
 
-    this.simulateMode = false;
-    this.isConnected = false;
-    this.connectionStatus = 'disconnected';
-    this.qrCode = null;
+    let formattedNumber = phoneNumber.replace(/\D/g, '');
+    if (!formattedNumber.startsWith('55')) {
+      formattedNumber = '55' + formattedNumber;
+    }
+    const jid = formattedNumber + '@s.whatsapp.net';
 
-    console.log('📱 Modo real ativado - use o endpoint /api/whatsapp/connect para conectar');
+    return await baileysWhatsAppService.sendMediaFromUrl(jid, url, caption);
+  }
+
+  async sendLocation(phoneNumber: string, latitude: number, longitude: number, name?: string): Promise<boolean> {
+    if (this.simulateMode) {
+      console.log(`📱 MODO SIMULAÇÃO - Enviando localização para ${phoneNumber}: ${latitude}, ${longitude}`);
+      return true;
+    }
+
+    let formattedNumber = phoneNumber.replace(/\D/g, '');
+    if (!formattedNumber.startsWith('55')) {
+      formattedNumber = '55' + formattedNumber;
+    }
+    const jid = formattedNumber + '@s.whatsapp.net';
+
+    return await baileysWhatsAppService.sendLocation(jid, latitude, longitude, name);
   }
 }
 

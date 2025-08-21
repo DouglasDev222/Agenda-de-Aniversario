@@ -362,6 +362,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New Baileys-specific routes
+  app.get("/api/whatsapp/profile-picture/:phoneNumber", authenticateToken, async (req, res) => {
+    try {
+      const { phoneNumber } = req.params;
+      const profilePicture = await whatsappService.getProfilePicture(phoneNumber);
+      res.json({ profilePicture });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get profile picture" });
+    }
+  });
+
+  app.get("/api/whatsapp/status/:phoneNumber", authenticateToken, async (req, res) => {
+    try {
+      const { phoneNumber } = req.params;
+      const status = await whatsappService.getStatus(phoneNumber);
+      res.json({ status });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get status" });
+    }
+  });
+
+  app.post("/api/whatsapp/send-media", authenticateToken, async (req, res) => {
+    try {
+      const { phoneNumber, url, caption } = req.body;
+      const success = await whatsappService.sendMediaFromUrl(phoneNumber, url, caption);
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send media" });
+    }
+  });
+
+  app.post("/api/whatsapp/send-location", authenticateToken, async (req, res) => {
+    try {
+      const { phoneNumber, latitude, longitude, name } = req.body;
+      const success = await whatsappService.sendLocation(phoneNumber, latitude, longitude, name);
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to enable real mode" });
+    }
+  });
+
   app.post("/api/whatsapp/test-connection", authenticateToken, requireAdmin, async (_req, res) => {
     try {
       const connectionResult = await whatsappService.testConnection();

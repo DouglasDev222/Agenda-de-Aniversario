@@ -74,20 +74,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### 2025-08-11: WhatsApp Integration Setup
-- **WhatsApp-Web.js Migration**: Successfully migrated from Puppeteer to whatsapp-web.js library
-- **ES Module Compatibility**: Implemented createRequire solution for CommonJS library integration
-- **Dual Mode System**: Implemented switching between simulation and real modes
-- **Environment Limitations**: Documented Replit environment constraints for browser automation
-- **Message Templates**: Created comprehensive birthday and reminder templates with variables:
+### 2025-08-11: WhatsApp Integration with Baileys
+- **Baileys Migration**: Successfully migrated from whatsapp-web.js/Puppeteer to Baileys library
+- **Performance Improvement**: Baileys is lighter and more efficient than browser-based solutions
+- **No Browser Dependencies**: Removed Puppeteer completely - no more browser automation overhead
+- **Enhanced Features**: Added support for media, location, profile pictures, and status
+- **Multi-Auth Support**: Implemented multi-file authentication state management
+- **Dual Mode System**: Maintained switching between simulation and real modes
+- **Message Templates**: Maintained comprehensive birthday and reminder templates with variables:
   - Variables: [NOME], [CARGO], [IDADE], [DATA_NASCIMENTO]
   - Reminder template for day-before notifications
   - Birthday template for same-day celebrations
 - **Test Data**: Populated database with 10 sample employees for testing
-- **UI Enhancement**: Added WhatsApp connection interface with QR code display capability
+- **UI Enhancement**: Maintained WhatsApp connection interface with QR code display capability
 
 ### Production Notes
-- WhatsApp real mode requires local environment or Docker with proper system dependencies
-- In Replit: Use simulation mode for development and testing
-- For production: Deploy to environment with libgbm1, libnss3, libxss1, libgtk-3-0, libasound2
-- WhatsApp-Web.js provides better session management and stability than raw Puppeteer
+- Baileys works directly with WhatsApp Web API - no browser required
+- Much lighter resource usage compared to Puppeteer-based solutions
+- Better reliability and session management
+- Authentication state persists across restarts
+- Supports all modern WhatsApp features including media and locations
